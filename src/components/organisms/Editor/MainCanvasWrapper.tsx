@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import { Stage, Layer, Rect, Line } from "react-konva";
@@ -40,26 +41,12 @@ const MainCanvasWrapper: React.FC = () => {
 		null,
 	);
 	const [doorTexture, setDoorTexture] = useState<HTMLImageElement | null>(null);
-
-	// Add logging for component lifecycle
-	useEffect(() => {
-		console.log("MainCanvasWrapper mounted or updated");
-		console.log("Current room data:", currentRoom);
-		console.log("Door data available:", Boolean(currentRoom?.door));
-		if (currentRoom?.door) {
-			console.log("Number of doors:", currentRoom.door.length);
-			console.log("Door positions:", currentRoom.door);
-		}
-
-		return () => {
-			console.log("MainCanvasWrapper unmounting");
-		};
-	}, [currentRoom]);
+	const [propImages, setPropImages] = useState<
+		Record<string, HTMLImageElement | null>
+	>({});
 
 	useEffect(() => {
-		console.log("Loading textures...");
-		console.log("Floor texture URL:", floorTextureUrl);
-		console.log("Door texture URL:", currentRoom?.doorTexture);
+		console.log("Loading all textures...");
 
 		const loadTexture = (
 			url: string | undefined,
@@ -92,17 +79,49 @@ const MainCanvasWrapper: React.FC = () => {
 			}
 		};
 
+		// Load floor texture
 		loadTexture(floorTextureUrl, setFloorTexture, "floor");
-		loadTexture(currentRoom?.doorTexture, setDoorTexture, "door");
-	}, [floorTextureUrl, currentRoom?.doorTexture]);
 
-	// Add logging for door texture state changes
-	useEffect(() => {
+		// Load door texture
+		loadTexture(currentRoom?.doorTexture, setDoorTexture, "door");
+
+		// Load prop textures
+		if (currentRoom?.props && currentRoom.props.length > 0) {
+			console.log(`Loading ${currentRoom.props.length} prop textures`);
+
+			currentRoom.props.forEach((prop) => {
+				if (prop.imageUrl) {
+					const img = new Image();
+					img.src = prop.imageUrl;
+					img.onload = () => {
+						console.log(
+							`Prop texture loaded for ${prop.id}, dimensions:`,
+							img.width,
+							"x",
+							img.height,
+						);
+						setPropImages((prev) => ({ ...prev, [prop.id]: img }));
+					};
+					img.onerror = (err) => {
+						console.error(`Failed to load prop texture for ${prop.id}:`, err);
+						setPropImages((prev) => ({ ...prev, [prop.id]: null }));
+					};
+				}
+			});
+		} else {
+			console.log("No props to load textures for");
+		}
+
+		// Log texture state changes
+		console.log("Floor texture:", floorTexture ? "Loaded" : "Not loaded");
+		console.log("Door texture:", doorTexture ? "Loaded" : "Not loaded");
 		console.log(
-			"Door texture state changed:",
-			doorTexture ? "Loaded" : "Not loaded",
+			"Prop textures:",
+			Object.keys(propImages).length > 0
+				? `${Object.keys(propImages).length} loaded`
+				: "None loaded",
 		);
-	}, [doorTexture]);
+	}, [floorTextureUrl, currentRoom?.doorTexture, currentRoom?.props]);
 
 	const handleCellAction = (row: number, col: number) => {
 		const key = `${row}-${col}`;
@@ -124,6 +143,24 @@ const MainCanvasWrapper: React.FC = () => {
 			case "startPoint":
 				dispatch(setStartingPoint({ row, col })); // Save starting point in grid coordinates
 				break;
+			case "props":
+				if (selectedPropFromLibrary) {
+					dispatch(
+						addProp({
+							roomId: currentRoom.id,
+							prop: {
+								id: `prop-${uuidv4()}`,
+								name: selectedPropFromLibrary.name,
+								imageUrl: selectedPropFromLibrary.imageUrl,
+								position: { row, col },
+								rotation: 0,
+								hasCollider: selectedPropFromLibrary.hasCollider,
+							},
+						}),
+					);
+				}
+				break;
+
 			case "riddle":
 				dispatch(
 					addRiddle({
@@ -388,6 +425,8 @@ const MainCanvasWrapper: React.FC = () => {
 
 		// Render a single door instead of mapping through an array
 		const door = currentRoom.door;
+		const rotation = door.rotation || 0;
+
 		return (
 			<Rect
 				key='door'
@@ -401,15 +440,91 @@ const MainCanvasWrapper: React.FC = () => {
 					y: GRID_SIZE / doorTexture.height,
 				}}
 				fillPatternOffset={{ x: 0, y: 0 }}
+				fillPatternRotation={rotation} // Apply rotation to the texture pattern only
 				stroke='#555'
 				strokeWidth={2}
 				shadowColor='black'
 				shadowBlur={10}
 				shadowOffset={{ x: 5, y: 5 }}
 				shadowOpacity={0.5}
-				shadowForStrokeEnabled={false} // Better performance
+				shadowForStrokeEnabled={false}
 			/>
 		);
+	};
+
+	const renderStartingPoint = () => {
+		console.log("Attempting to render starting point");
+		console.log("Starting point data:", currentRoom?.startingPoint);
+
+		if (!currentRoom?.startingPoint) {
+			console.log("No starting point defined");
+			return null;
+		}
+
+		const { row, col } = currentRoom.startingPoint;
+
+		// Render a distinctive marker for the starting point
+		return (
+			<React.Fragment>
+				{/* Circle to represent the starting point */}
+				<Rect
+					x={col * GRID_SIZE}
+					y={row * GRID_SIZE}
+					width={GRID_SIZE}
+					height={GRID_SIZE}
+					fill='transparent'
+				/>
+				{/* Add a "start" icon or text */}
+				<Rect
+					x={col * GRID_SIZE + GRID_SIZE / 4}
+					y={row * GRID_SIZE + GRID_SIZE / 4}
+					width={GRID_SIZE / 2}
+					height={GRID_SIZE / 2}
+					fill='#00AA00'
+					cornerRadius={GRID_SIZE / 4}
+				/>
+			</React.Fragment>
+		);
+	};
+
+	const renderProps = () => {
+		console.log("Attempting to render props");
+
+		if (!currentRoom?.props || currentRoom.props.length === 0) {
+			console.log("No props to render");
+			return null;
+		}
+
+		console.log(`Rendering ${currentRoom.props.length} props`);
+
+		return currentRoom.props.map((prop) => {
+			// Get the image for this specific prop from our state
+			const propImage = propImages[prop.id];
+
+			if (!propImage) {
+				console.log(`No image loaded yet for prop ${prop.id}`);
+				return null;
+			}
+
+			return (
+				<Rect
+					key={prop.id}
+					x={prop.position.col * GRID_SIZE}
+					y={prop.position.row * GRID_SIZE}
+					width={GRID_SIZE}
+					height={GRID_SIZE}
+					fillPatternImage={propImage}
+					fillPatternScale={{
+						x: GRID_SIZE / propImage.width,
+						y: GRID_SIZE / propImage.height,
+					}}
+					fillPatternRotation={prop.rotation || 0}
+					stroke={prop.hasCollider ? "green" : "transparent"}
+					strokeWidth={prop.hasCollider ? 2 : 0}
+					onClick={() => setSelectedPropOnCanvas(prop.id)}
+				/>
+			);
+		});
 	};
 
 	return (
@@ -417,6 +532,8 @@ const MainCanvasWrapper: React.FC = () => {
 			<Layer>{renderGrid()}</Layer>
 			<Layer>{renderWalls()}</Layer>
 			<Layer>{renderDoors()}</Layer>
+			<Layer>{renderStartingPoint()}</Layer>
+			<Layer>{renderProps()}</Layer>
 		</Stage>
 	);
 };

@@ -19,7 +19,7 @@ const Editor: React.FC = () => {
 			</div>
 
 			{/* Right Sidebar */}
-			<div className='w-64 bg-gray-700 border-l border-gray-600 z-50'>
+			<div className='w-72 bg-gray-800 border-gray-600 z-50'>
 				<RightSidebar />
 			</div>
 		</div>

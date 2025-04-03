@@ -1,5 +1,4 @@
 export const isBorderClosed = (grid: Record<string, boolean>): boolean => {
-
 	if (!grid || Object.keys(grid).length === 0) {
 		return false;
 	}
@@ -17,10 +16,8 @@ export const isBorderClosed = (grid: Record<string, boolean>): boolean => {
 		maxCol = Math.max(maxCol, col);
 	});
 
-	
-
-	const rows = maxRow - minRow + 3; 
-	const cols = maxCol - minCol + 3; 
+	const rows = maxRow - minRow + 3;
+	const cols = maxCol - minCol + 3;
 	const fullGrid: boolean[][] = Array(rows)
 		.fill(0)
 		.map(() => Array(cols).fill(false));
@@ -45,7 +42,7 @@ export const isBorderClosed = (grid: Record<string, boolean>): boolean => {
 		[-1, 0],
 	];
 
-	const queue: [number, number][] = [[0, 0]]; 
+	const queue: [number, number][] = [[0, 0]];
 	visited[0][0] = true;
 
 	while (queue.length > 0) {
@@ -68,7 +65,6 @@ export const isBorderClosed = (grid: Record<string, boolean>): boolean => {
 			}
 		}
 	}
-
 
 	let enclosedCells = 0;
 
@@ -106,11 +102,9 @@ export const isBorderClosed = (grid: Record<string, boolean>): boolean => {
 		}
 
 		hasBorderStructure = borderCellCount > 0 && interiorCellCount > 0;
-
 	}
 
 	const hasBorderClosed = enclosedCells > 0 || hasBorderStructure;
-	
 
 	return hasBorderClosed;
 };
@@ -217,7 +211,6 @@ export const isGridFilled = (grid: Record<string, boolean>): boolean => {
 export const fillGrid = (
 	grid: Record<string, boolean>,
 ): Record<string, boolean> => {
-
 	if (!grid || Object.keys(grid).length === 0) {
 		return {};
 	}
@@ -253,3 +246,85 @@ export const fillGrid = (
 
 	return newGrid;
 };
+
+
+export const isDoorValid = (
+	grid: Record<string, boolean>,
+	door: { row: number; col: number } | null,
+): boolean => {
+	if (!door || !grid) return false;
+
+	const key = `${door.row}-${door.col}`;
+
+	// Check if the door is placed on an active grid cell
+	const isOnGrid = Boolean(grid[key]);
+
+	console.log(
+		`isDoorValid: Door at (${door.row},${door.col}) is ${
+			isOnGrid ? "valid" : "invalid"
+		}`,
+	);
+
+	return isOnGrid;
+};
+
+
+export const isStartingPointValid = (
+	grid: Record<string, boolean>,
+	startingPoint: { row: number; col: number } | null,
+): boolean => {
+	if (!startingPoint || !grid) return false;
+
+	const key = `${startingPoint.row}-${startingPoint.col}`;
+
+	// Check if the starting point is placed on an active grid cell
+	const isOnGrid = Boolean(grid[key]);
+
+	console.log(
+		`isStartingPointValid: Starting point at (${startingPoint.row},${
+			startingPoint.col
+		}) is ${isOnGrid ? "valid" : "invalid"}`,
+	);
+
+	return isOnGrid;
+};
+
+export const areRoomElementsValid = (room: {
+	grid: Record<string, boolean>;
+	door: { row: number; col: number } | null;
+	startingPoint: { row: number; col: number } | null;
+}): boolean => {
+	if (!room || !room.grid) return false;
+
+	const isDoorPlacementValid = !room.door || isDoorValid(room.grid, room.door);
+	const isStartPointValid =
+		!room.startingPoint || isStartingPointValid(room.grid, room.startingPoint);
+
+	const isValid = isDoorPlacementValid && isStartPointValid;
+
+	console.log(
+		`areRoomElementsValid: Room elements validation result: ${isValid}`,
+	);
+
+	return isValid;
+};
+
+export const suggestValidPosition = (
+	grid: Record<string, boolean>,
+): { row: number; col: number } | null => {
+	if (!grid || Object.keys(grid).length === 0) return null;
+
+	// Find the first valid grid cell
+	for (const key of Object.keys(grid)) {
+		if (grid[key]) {
+			const [row, col] = key.split("-").map(Number);
+			console.log(`suggestValidPosition: Suggested position (${row},${col})`);
+			return { row, col };
+		}
+	}
+
+	console.log("suggestValidPosition: No valid position found");
+	return null;
+};
+
+

@@ -9,6 +9,8 @@ import { LiaUserNinjaSolid } from "react-icons/lia";
 import { HiOutlineQuestionMarkCircle } from "react-icons/hi";
 import { TbTrashX } from "react-icons/tb";
 import { PiCouchDuotone } from "react-icons/pi";
+import { GrMultiple } from "react-icons/gr";
+import { MdOutlineInfo } from "react-icons/md";
 
 const toolsBeforeAccepted = [
 	{
@@ -33,12 +35,21 @@ const toolsAfterAccepted = [
 		icon: <HiOutlineQuestionMarkCircle />,
 		order: 5,
 	},
-	{ id: "assets", name: "Zasoby", icon: <PiCouchDuotone />, order: 6 },
+	{ id: "props", name: "Przedmioty", icon: <PiCouchDuotone />, order: 6 },
 ];
 
 const toolsCommon = [
 	{ id: "paintFloor", name: "Podłoga (Rysuj)", icon: <GrBrush />, order: 1 },
-	{ id: "clearRoom", name: "Wyczyść Pokój", icon: <TbTrashX />, order: 7 },
+	// Add metadata tool
+	{ id: "metadata", name: "Metadane", icon: <MdOutlineInfo />, order: 7 },
+	// Add room management tool
+	{
+		id: "roomManager",
+		name: "Zarządzanie Pokojami",
+		icon: <GrMultiple />,
+		order: 8,
+	},
+	{ id: "clearRoom", name: "Wyczyść Pokój", icon: <TbTrashX />, order: 9 },
 ];
 
 const FloatingToolbar = () => {
