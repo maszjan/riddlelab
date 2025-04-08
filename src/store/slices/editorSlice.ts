@@ -2,6 +2,8 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
 	isDoorValid,
+	isRiddleValid,
+	isPropValid,
 	suggestValidPosition,
 	isStartingPointValid,
 } from "../../utils/editorHelpers";
@@ -73,6 +75,7 @@ interface EditorState {
 		| "clearRoom"
 		| "metadata"
 		| "roomManager";
+	selectedRiddle: string | null;
 }
 
 const initialState: EditorState = {
@@ -109,12 +112,16 @@ const initialState: EditorState = {
 	],
 	currentRoomId: "room1",
 	selectedTool: "paintFloor",
+	selectedRiddle: null,
 };
 
 const editorSlice = createSlice({
 	name: "editor",
 	initialState,
 	reducers: {
+		setSelectedRiddle(state, action: PayloadAction<string | null>) {
+			state.selectedRiddle = action.payload;
+		},
 		setSelectedTool(state, action: PayloadAction<EditorState["selectedTool"]>) {
 			state.selectedTool = action.payload;
 		},
@@ -199,9 +206,70 @@ const editorSlice = createSlice({
 			state,
 			action: PayloadAction<{
 				id: string;
-				position: { x: number; y: number };
+				position: { row: number; col: number };
 				type: string;
-				data: any;
+				title: string;
+				question: string;
+				answer: string;
+				hints: string[];
+				options: any;
+			}>,
+		) {
+			const escapeRoom = state.escapeRooms.find(
+				(er) => er.id === state.currentEscapeRoomId,
+			);
+			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
+
+			if (room) {
+				const riddlePosition = action.payload.position;
+
+				// Validate the riddle position before saving
+				if (isRiddleValid(room.grid, riddlePosition)) {
+					room.riddles.push({
+						id: action.payload.id,
+						position: riddlePosition,
+						type: action.payload.type,
+						data: {
+							title: action.payload.title,
+							question: action.payload.question,
+							answer: action.payload.answer,
+							hints: action.payload.hints,
+							options: action.payload.options,
+						},
+					});
+					console.log(
+						`Riddle placed at (${riddlePosition.row}, ${riddlePosition.col})`,
+					);
+				} else {
+					console.warn("Cannot place riddle on invalid grid position");
+					// Optionally suggest a valid position
+					const validPosition = suggestValidPosition(room.grid);
+					if (validPosition) {
+						room.riddles.push({
+							id: action.payload.id,
+							position: validPosition,
+							type: action.payload.type,
+							data: {
+								title: action.payload.title,
+								question: action.payload.question,
+								answer: action.payload.answer,
+								hints: action.payload.hints,
+								options: action.payload.options,
+							},
+						});
+						console.log(
+							`Riddle auto-placed at valid position (${validPosition.row}, ${validPosition.col})`,
+						);
+					}
+				}
+			}
+		},
+
+		updateRiddle(
+			state,
+			action: PayloadAction<{
+				riddleId: string;
+				updates: Partial<Riddle>;
 			}>,
 		) {
 			const escapeRoom = state.escapeRooms.find(
@@ -209,7 +277,51 @@ const editorSlice = createSlice({
 			);
 			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
 			if (room) {
-				room.riddles.push(action.payload);
+				const riddleIndex = room.riddles.findIndex(
+					(r) => r.id === action.payload.riddleId,
+				);
+				if (riddleIndex !== -1) {
+					room.riddles[riddleIndex] = {
+						...room.riddles[riddleIndex],
+						...action.payload.updates,
+					};
+				}
+			}
+		},
+		updateRiddlePosition(
+			state,
+			action: PayloadAction<{
+				riddleId: string;
+				position: { row: number; col: number };
+			}>,
+		) {
+			const escapeRoom = state.escapeRooms.find(
+				(er) => er.id === state.currentEscapeRoomId,
+			);
+			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
+			if (room) {
+				const riddleIndex = room.riddles.findIndex(
+					(r) => r.id === action.payload.riddleId,
+				);
+				if (riddleIndex !== -1) {
+					room.riddles[riddleIndex].position = action.payload.position;
+				}
+			}
+		},
+		removeRiddle(
+			state,
+			action: PayloadAction<{
+				riddleId: string;
+			}>,
+		) {
+			const escapeRoom = state.escapeRooms.find(
+				(er) => er.id === state.currentEscapeRoomId,
+			);
+			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
+			if (room) {
+				room.riddles = room.riddles.filter(
+					(r) => r.id !== action.payload.riddleId,
+				);
 			}
 		},
 		setStartingPoint(
@@ -358,11 +470,32 @@ const editorSlice = createSlice({
 			const room = state.escapeRooms
 				.flatMap((er) => er.rooms)
 				.find((r) => r.id === action.payload.roomId);
+
 			if (room) {
-				room.props.push(action.payload.prop);
+				const propPosition = action.payload.prop.position;
+
+				// Validate the prop position before saving
+				if (isPropValid(room.grid, propPosition)) {
+					room.props.push(action.payload.prop);
+					console.log(
+						`Prop placed at (${propPosition.row}, ${propPosition.col})`,
+					);
+				} else {
+					console.warn("Cannot place prop on invalid grid position");
+					// Optionally suggest a valid position
+					const validPosition = suggestValidPosition(room.grid);
+					if (validPosition) {
+						room.props.push({
+							...action.payload.prop,
+							position: validPosition,
+						});
+						console.log(
+							`Prop auto-placed at valid position (${validPosition.row}, ${validPosition.col})`,
+						);
+					}
+				}
 			}
 		},
-
 		removeProp(
 			state,
 			action: PayloadAction<{ roomId: string; propId: string }>,
@@ -453,6 +586,11 @@ const editorSlice = createSlice({
 export const {
 	setCurrentEscapeRoom,
 	addRoom,
+	selectedRiddle,
+	updateRiddle,
+	removeRiddle,
+	setSelectedRiddle,
+	updateRiddlePosition,
 	removeRoom,
 	setCurrentRoom,
 	setSelectedTool,

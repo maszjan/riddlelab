@@ -1,0 +1,18 @@
+export const RIDDLE_TYPES = {
+	KNOWLEDGE: "knowledge",
+	MATHEMATICS: "mathematics",
+	LANGUAGE: "language",
+	CIPHER_CAESAR: "cipher_caesar",
+	CIPHER_VIGENERE: "cipher_vigenere",
+	CIPHER_MORSE: "cipher_morse",
+	CIPHER_BINARY: "cipher_binary",
+	CIPHER_ATBASH: "cipher_atbash",
+	CIPHER_SUBSTITUTION: "cipher_substitution",
+	WORDPLAY: "wordplay",
+	LOGIC: "logic",
+	SEQUENCE: "sequence",
+	ANAGRAM: "anagram",
+	REBUS: "rebus",
+	RIDDLE_CLASSIC: "riddle_classic",
+	CUSTOM: "custom",
+};

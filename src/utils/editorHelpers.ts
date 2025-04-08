@@ -247,7 +247,6 @@ export const fillGrid = (
 	return newGrid;
 };
 
-
 export const isDoorValid = (
 	grid: Record<string, boolean>,
 	door: { row: number; col: number } | null,
@@ -267,7 +266,6 @@ export const isDoorValid = (
 
 	return isOnGrid;
 };
-
 
 export const isStartingPointValid = (
 	grid: Record<string, boolean>,
@@ -293,14 +291,26 @@ export const areRoomElementsValid = (room: {
 	grid: Record<string, boolean>;
 	door: { row: number; col: number } | null;
 	startingPoint: { row: number; col: number } | null;
+	riddles: Array<{ position: { row: number; col: number } }>;
+	props: Array<{ position: { row: number; col: number } }>;
 }): boolean => {
 	if (!room || !room.grid) return false;
 
 	const isDoorPlacementValid = !room.door || isDoorValid(room.grid, room.door);
 	const isStartPointValid =
 		!room.startingPoint || isStartingPointValid(room.grid, room.startingPoint);
+	const areRiddlesValid = room.riddles.every((riddle) =>
+		isRiddleValid(room.grid, riddle.position),
+	);
+	const arePropsValid = room.props.every((prop) =>
+		isPropValid(room.grid, prop.position),
+	);
 
-	const isValid = isDoorPlacementValid && isStartPointValid;
+	const isValid =
+		isDoorPlacementValid &&
+		isStartPointValid &&
+		areRiddlesValid &&
+		arePropsValid;
 
 	console.log(
 		`areRoomElementsValid: Room elements validation result: ${isValid}`,
@@ -327,4 +337,42 @@ export const suggestValidPosition = (
 	return null;
 };
 
+export const isRiddleValid = (
+	grid: Record<string, boolean>,
+	riddle: { row: number; col: number } | null,
+): boolean => {
+	if (!riddle || !grid) return false;
 
+	const key = `${riddle.row}-${riddle.col}`;
+
+	// Check if the riddle is placed on an active grid cell
+	const isOnGrid = Boolean(grid[key]);
+
+	console.log(
+		`isRiddleValid: Riddle at (${riddle.row},${riddle.col}) is ${
+			isOnGrid ? "valid" : "invalid"
+		}`,
+	);
+
+	return isOnGrid;
+};
+
+export const isPropValid = (
+	grid: Record<string, boolean>,
+	prop: { row: number; col: number } | null,
+): boolean => {
+	if (!prop || !grid) return false;
+
+	const key = `${prop.row}-${prop.col}`;
+
+	// Check if the prop is placed on an active grid cell
+	const isOnGrid = Boolean(grid[key]);
+
+	console.log(
+		`isPropValid: Prop at (${prop.row},${prop.col}) is ${
+			isOnGrid ? "valid" : "invalid"
+		}`,
+	);
+
+	return isOnGrid;
+};

@@ -11,7 +11,9 @@ import {
 	addRiddle,
 	clearRoom,
 	updateWalls,
+	selectedRiddle,
 } from "../../../store/slices/editorSlice";
+import { v4 as uuidv4 } from "uuid";
 
 const GRID_SIZE = 40; // Size of each grid cell
 const ROOM_WIDTH = 30; // Number of columns
@@ -162,15 +164,26 @@ const MainCanvasWrapper: React.FC = () => {
 				break;
 
 			case "riddle":
+				// Check if we already have 5 riddles
+				if (currentRoom?.riddles && currentRoom.riddles.length >= 5) {
+					console.log("Maximum number of riddles (5) reached");
+					return;
+				}
+
 				dispatch(
 					addRiddle({
-						id: `riddle-${Date.now()}`,
-						position: { x: col * GRID_SIZE, y: row * GRID_SIZE },
-						type: "default",
-						data: {},
+						id: `riddle-${uuidv4()}`, // Use uuidv4 for unique IDs
+						position: { row, col }, // Use row/col format instead of x/y
+						type: "knowledge", // Default type
+						title: "New Riddle",
+						question: "What is the question?",
+						answer: "",
+						hints: [],
+						options: {},
 					}),
 				);
 				break;
+
 			case "walls":
 				if (floorAccepted) {
 					dispatch(updateWalls({ key, color: wallColor })); // Update wall color
@@ -527,6 +540,42 @@ const MainCanvasWrapper: React.FC = () => {
 		});
 	};
 
+	const renderRiddles = () => {
+		if (!currentRoom?.riddles || currentRoom.riddles.length === 0) {
+			return null;
+		}
+
+		return currentRoom.riddles.map((riddle) => {
+			if (!riddle.position) return null;
+
+			const { row, col } = riddle.position;
+			const isSelected = riddle.id === selectedRiddle;
+
+			return (
+				<React.Fragment key={riddle.id}>
+					{/* Transparent background */}
+					<Rect
+						x={col * GRID_SIZE}
+						y={row * GRID_SIZE}
+						width={GRID_SIZE}
+						height={GRID_SIZE}
+						fill='transparent'
+					/>
+					{/* Riddle marker */}
+					<Rect
+						x={col * GRID_SIZE + GRID_SIZE / 4}
+						y={row * GRID_SIZE + GRID_SIZE / 4}
+						width={GRID_SIZE / 2}
+						height={GRID_SIZE / 2}
+						fill={isSelected ? "#FF9900" : "#3BCEAC"}
+						cornerRadius={GRID_SIZE / 4}
+						onClick={() => dispatch(setSelectedRiddle(riddle.id))}
+					/>
+				</React.Fragment>
+			);
+		});
+	};
+
 	return (
 		<Stage width={ROOM_WIDTH * GRID_SIZE} height={ROOM_HEIGHT * GRID_SIZE}>
 			<Layer>{renderGrid()}</Layer>
@@ -534,6 +583,7 @@ const MainCanvasWrapper: React.FC = () => {
 			<Layer>{renderDoors()}</Layer>
 			<Layer>{renderStartingPoint()}</Layer>
 			<Layer>{renderProps()}</Layer>
+			<Layer>{renderRiddles()}</Layer>
 		</Stage>
 	);
 };

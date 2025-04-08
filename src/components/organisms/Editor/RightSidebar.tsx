@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { RIDDLE_TYPES } from "../../../utils/riddleHelpers";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store";
 import { v4 as uuidv4 } from "uuid";
 import {
+	addRiddle,
+	removeRiddle,
+	updateRiddle,
 	addProp,
 	removeProp,
 	clearRoom,
@@ -26,6 +30,9 @@ const RightSidebar = () => {
 	const dispatch = useDispatch();
 	const selectedTool = useSelector(
 		(state: RootState) => state.editor.selectedTool,
+	);
+	const selectedRiddle = useSelector(
+		(state: RootState) => state.editor.selectedRiddle,
 	);
 
 	const currentEscapeRoomId = useSelector(
@@ -96,6 +103,80 @@ const RightSidebar = () => {
 			hasCollider: boolean;
 		}>
 	>([]);
+	const [selectedRiddleId, setSelectedRiddleId] = useState<string | null>(null);
+	const [riddleTitle, setRiddleTitle] = useState<string>("");
+	const [riddleType, setRiddleType] = useState<string>(RIDDLE_TYPES.KNOWLEDGE);
+	const [riddleQuestion, setRiddleQuestion] = useState<string>("");
+	const [riddleAnswer, setRiddleAnswer] = useState<string>("");
+	const [riddleHints, setRiddleHints] = useState<string[]>([]);
+	const [newHint, setNewHint] = useState<string>("");
+
+	const handleAddRiddle = () => {
+		if (riddleTitle.trim() && riddleQuestion.trim() && riddleAnswer.trim()) {
+			const newRiddle = {
+				id: `riddle-${uuidv4()}`,
+				position: { row: 0, col: 0 }, // Default position
+				type: riddleType,
+				data: {
+					title: riddleTitle,
+					question: riddleQuestion,
+					answer: riddleAnswer,
+					hints: riddleHints,
+				},
+			};
+			dispatch(addRiddle(newRiddle));
+			resetRiddleForm();
+		}
+	};
+
+	const handleUpdateRiddle = () => {
+		if (
+			selectedRiddleId &&
+			riddleTitle.trim() &&
+			riddleQuestion.trim() &&
+			riddleAnswer.trim()
+		) {
+			dispatch(
+				updateRiddle({
+					riddleId: selectedRiddleId,
+					updates: {
+						type: riddleType,
+						data: {
+							title: riddleTitle,
+							question: riddleQuestion,
+							answer: riddleAnswer,
+							hints: riddleHints,
+						},
+					},
+				}),
+			);
+			resetRiddleForm();
+		}
+	};
+
+	const handleRemoveRiddle = (riddleId: string) => {
+		dispatch(removeRiddle({ riddleId }));
+		if (selectedRiddleId === riddleId) {
+			resetRiddleForm();
+		}
+	};
+
+	const handleAddHint = () => {
+		if (newHint.trim()) {
+			setRiddleHints([...riddleHints, newHint]);
+			setNewHint("");
+		}
+	};
+
+	const resetRiddleForm = () => {
+		setSelectedRiddleId(null);
+		setRiddleTitle("");
+		setRiddleType(RIDDLE_TYPES.KNOWLEDGE);
+		setRiddleQuestion("");
+		setRiddleAnswer("");
+		setRiddleHints([]);
+		setNewHint("");
+	};
 
 	const handleClearFloorColor = () => {
 		setFloorColor(null);
@@ -740,12 +821,231 @@ const RightSidebar = () => {
 			case "riddle":
 				return (
 					<div>
-						<h4 className='text-md font-bold text-white mb-4'>Opcje zagadek</h4>
-						<p className='text-sm text-gray-300'>
-							Kliknij na siatkę, aby dodać zagadkę.
-						</p>
+						<h4 className='text-md font-bold text-white mb-4'>
+							Zarządzanie zagadkami
+						</h4>
+
+						{/* Selected Riddle Indicator for positioning */}
+						{selectedRiddle && (
+							<div className='mb-4 p-2 bg-yellow-600 bg-opacity-20 rounded'>
+								<div className='flex justify-between items-center'>
+									<span className='text-sm text-white'>
+										Wybrana zagadka do przeniesienia
+									</span>
+									<button
+										onClick={() => dispatch(setSelectedRiddle(null))}
+										className='text-xs text-red-400'>
+										Odznacz
+									</button>
+								</div>
+								<p className='text-xs text-gray-300 mt-1'>
+									Kliknij na siatkę, aby przenieść zagadkę
+								</p>
+							</div>
+						)}
+
+						{/* List of existing riddles */}
+						{currentRoom?.riddles && currentRoom.riddles.length > 0 ? (
+							<div className='mb-4'>
+								<h5 className='text-sm font-bold text-white mb-2'>
+									Istniejące zagadki ({currentRoom.riddles.length}/5)
+								</h5>
+								<ul className='text-sm text-gray-300 mb-4 max-h-40 overflow-y-auto'>
+									{currentRoom.riddles.map((riddle) => (
+										<li
+											key={riddle.id}
+											className={`flex justify-between items-center mb-2 p-2 ${
+												selectedRiddleId === riddle.id
+													? "bg-gray-600"
+													: selectedRiddle === riddle.id
+													? "bg-mainMint bg-opacity-20"
+													: "bg-gray-700"
+											} rounded cursor-pointer`}
+											onClick={() => {
+												if (selectedRiddle === riddle.id) {
+													// If already selected for positioning, select for editing
+													dispatch(setSelectedRiddle(null));
+													setSelectedRiddleId(riddle.id);
+													setRiddleTitle(riddle.data?.title || "");
+													setRiddleType(riddle.type || RIDDLE_TYPES.KNOWLEDGE);
+													setRiddleQuestion(riddle.data?.question || "");
+													setRiddleAnswer(riddle.data?.answer || "");
+													setRiddleHints(riddle.data?.hints || []);
+												} else if (selectedRiddleId === riddle.id) {
+													// If already selected for editing, select for positioning
+													setSelectedRiddleId(null);
+													dispatch(setSelectedRiddle(riddle.id));
+												} else {
+													// Not selected at all, select for editing
+													setSelectedRiddleId(riddle.id);
+													setRiddleTitle(riddle.data?.title || "");
+													setRiddleType(riddle.type || RIDDLE_TYPES.KNOWLEDGE);
+													setRiddleQuestion(riddle.data?.question || "");
+													setRiddleAnswer(riddle.data?.answer || "");
+													setRiddleHints(riddle.data?.hints || []);
+												}
+											}}>
+											<div className='flex items-center'>
+												<div
+													className='w-4 h-4 mr-2 rounded-full'
+													style={{
+														backgroundColor:
+															selectedRiddle === riddle.id
+																? "#3BCEAC"
+																: "transparent",
+														border: "1px solid #3BCEAC",
+													}}
+												/>
+												<span className='text-xs'>
+													{riddle.data?.title || "Bez tytułu"}
+												</span>
+											</div>
+											<div className='flex'>
+												{selectedRiddleId !== riddle.id && (
+													<button
+														onClick={(e) => {
+															e.stopPropagation();
+															dispatch(setSelectedRiddle(riddle.id));
+															setSelectedRiddleId(null);
+														}}
+														className='text-blue-400 text-xs mr-2'>
+														Przenieś
+													</button>
+												)}
+												<button
+													onClick={(e) => {
+														e.stopPropagation();
+														handleRemoveRiddle(riddle.id);
+													}}
+													className='text-red-500 text-xs'>
+													Usuń
+												</button>
+											</div>
+										</li>
+									))}
+								</ul>
+							</div>
+						) : (
+							<p className='text-sm text-gray-300 mb-4'>
+								Brak zagadek. Dodaj pierwszą!
+							</p>
+						)}
+
+						{/* Form for adding/editing riddles */}
+						<div className='mb-4'>
+							<h5 className='text-sm font-bold text-white mb-2'>
+								{selectedRiddleId ? "Edytuj zagadkę" : "Dodaj nową zagadkę"}
+							</h5>
+
+							<input
+								type='text'
+								value={riddleTitle}
+								onChange={(e) => setRiddleTitle(e.target.value)}
+								placeholder='Tytuł zagadki'
+								className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'
+							/>
+
+							<select
+								value={riddleType}
+								onChange={(e) => setRiddleType(e.target.value)}
+								className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'>
+								{Object.entries(RIDDLE_TYPES).map(([key, value]) => (
+									<option key={key} value={value}>
+										{key}
+									</option>
+								))}
+							</select>
+
+							<textarea
+								value={riddleQuestion}
+								onChange={(e) => setRiddleQuestion(e.target.value)}
+								placeholder='Treść zagadki'
+								className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm h-20 mb-2'
+							/>
+
+							<input
+								type='text'
+								value={riddleAnswer}
+								onChange={(e) => setRiddleAnswer(e.target.value)}
+								placeholder='Odpowiedź'
+								className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'
+							/>
+
+							{/* Hints section */}
+							<div className='mb-2'>
+								<label className='text-xs text-gray-300 block mb-1'>
+									Podpowiedzi:
+								</label>
+								{riddleHints.map((hint, index) => (
+									<div
+										key={index}
+										className='flex justify-between items-center mb-1'>
+										<span className='text-xs text-gray-300'>{hint}</span>
+										<button
+											onClick={() =>
+												setRiddleHints(
+													riddleHints.filter((_, i) => i !== index),
+												)
+											}
+											className='text-red-500 text-xs'>
+											Usuń
+										</button>
+									</div>
+								))}
+								<div className='flex'>
+									<input
+										type='text'
+										value={newHint}
+										onChange={(e) => setNewHint(e.target.value)}
+										placeholder='Nowa podpowiedź'
+										className='flex-grow px-2 py-1 bg-gray-700 text-white rounded-l text-sm'
+									/>
+									<button
+										onClick={handleAddHint}
+										className='px-2 py-1 bg-mainMint text-gray-700 rounded-r'>
+										Dodaj
+									</button>
+								</div>
+							</div>
+
+							{/* Action buttons */}
+							<div className='flex space-x-2'>
+								{selectedRiddleId ? (
+									<>
+										<button
+											onClick={handleUpdateRiddle}
+											className='flex-1 py-2 bg-mainMint text-gray-700 rounded'>
+											Aktualizuj
+										</button>
+										<button
+											onClick={resetRiddleForm}
+											className='flex-1 py-2 bg-gray-600 text-white rounded'>
+											Anuluj
+										</button>
+									</>
+								) : (
+									<button
+										onClick={handleAddRiddle}
+										className='w-full py-2 bg-mainMint text-gray-700 rounded'
+										disabled={
+											!riddleTitle.trim() ||
+											!riddleQuestion.trim() ||
+											!riddleAnswer.trim()
+										}>
+										Dodaj zagadkę
+									</button>
+								)}
+							</div>
+						</div>
+
+						{currentRoom?.riddles && currentRoom.riddles.length >= 5 && (
+							<p className='text-xs text-yellow-500'>
+								Osiągnięto maksymalną liczbę zagadek (5) dla tego pokoju.
+							</p>
+						)}
 					</div>
 				);
+
 			case "props":
 				return (
 					<div>
