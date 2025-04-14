@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { RIDDLE_TYPES } from "../../../utils/riddleHelpers";
+import { RiddleFormState } from "../../../interfaces";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store";
 import { v4 as uuidv4 } from "uuid";
 import {
 	addRiddle,
+	setSelectedRiddle,
 	removeRiddle,
 	updateRiddle,
 	addProp,
 	removeProp,
+	setSelectedProp,
 	clearRoom,
 	updateMetadata,
 	updateWalls,
@@ -33,6 +36,10 @@ const RightSidebar = () => {
 	);
 	const selectedRiddle = useSelector(
 		(state: RootState) => state.editor.selectedRiddle,
+	);
+
+	const selectedProp = useSelector(
+		(state: RootState) => state.editor.selectedProp,
 	);
 
 	const currentEscapeRoomId = useSelector(
@@ -103,25 +110,32 @@ const RightSidebar = () => {
 			hasCollider: boolean;
 		}>
 	>([]);
-	const [selectedRiddleId, setSelectedRiddleId] = useState<string | null>(null);
-	const [riddleTitle, setRiddleTitle] = useState<string>("");
-	const [riddleType, setRiddleType] = useState<string>(RIDDLE_TYPES.KNOWLEDGE);
-	const [riddleQuestion, setRiddleQuestion] = useState<string>("");
-	const [riddleAnswer, setRiddleAnswer] = useState<string>("");
-	const [riddleHints, setRiddleHints] = useState<string[]>([]);
+	const [riddleForm, setRiddleForm] = useState<RiddleFormState>({
+		id: null,
+		title: "",
+		type: RIDDLE_TYPES.KNOWLEDGE,
+		question: "",
+		answer: "",
+		hints: [],
+		isEditing: false,
+	});
 	const [newHint, setNewHint] = useState<string>("");
 
 	const handleAddRiddle = () => {
-		if (riddleTitle.trim() && riddleQuestion.trim() && riddleAnswer.trim()) {
+		if (
+			riddleForm.title.trim() &&
+			riddleForm.question.trim() &&
+			riddleForm.answer.trim()
+		) {
 			const newRiddle = {
 				id: `riddle-${uuidv4()}`,
 				position: { row: 0, col: 0 }, // Default position
-				type: riddleType,
+				type: riddleForm.type,
 				data: {
-					title: riddleTitle,
-					question: riddleQuestion,
-					answer: riddleAnswer,
-					hints: riddleHints,
+					title: riddleForm.title,
+					question: riddleForm.question,
+					answer: riddleForm.answer,
+					hints: riddleForm.hints,
 				},
 			};
 			dispatch(addRiddle(newRiddle));
@@ -131,21 +145,21 @@ const RightSidebar = () => {
 
 	const handleUpdateRiddle = () => {
 		if (
-			selectedRiddleId &&
-			riddleTitle.trim() &&
-			riddleQuestion.trim() &&
-			riddleAnswer.trim()
+			riddleForm.id &&
+			riddleForm.title.trim() &&
+			riddleForm.question.trim() &&
+			riddleForm.answer.trim()
 		) {
 			dispatch(
 				updateRiddle({
-					riddleId: selectedRiddleId,
+					riddleId: riddleForm.id,
 					updates: {
-						type: riddleType,
+						type: riddleForm.type,
 						data: {
-							title: riddleTitle,
-							question: riddleQuestion,
-							answer: riddleAnswer,
-							hints: riddleHints,
+							title: riddleForm.title,
+							question: riddleForm.question,
+							answer: riddleForm.answer,
+							hints: riddleForm.hints,
 						},
 					},
 				}),
@@ -156,25 +170,31 @@ const RightSidebar = () => {
 
 	const handleRemoveRiddle = (riddleId: string) => {
 		dispatch(removeRiddle({ riddleId }));
-		if (selectedRiddleId === riddleId) {
+		if (riddleForm.id === riddleId) {
 			resetRiddleForm();
 		}
 	};
 
 	const handleAddHint = () => {
 		if (newHint.trim()) {
-			setRiddleHints([...riddleHints, newHint]);
+			setRiddleForm({
+				...riddleForm,
+				hints: [...riddleForm.hints, newHint],
+			});
 			setNewHint("");
 		}
 	};
 
 	const resetRiddleForm = () => {
-		setSelectedRiddleId(null);
-		setRiddleTitle("");
-		setRiddleType(RIDDLE_TYPES.KNOWLEDGE);
-		setRiddleQuestion("");
-		setRiddleAnswer("");
-		setRiddleHints([]);
+		setRiddleForm({
+			id: null,
+			title: "",
+			type: RIDDLE_TYPES.KNOWLEDGE,
+			question: "",
+			answer: "",
+			hints: [],
+			isEditing: false,
+		});
 		setNewHint("");
 	};
 
@@ -465,6 +485,46 @@ const RightSidebar = () => {
 	const handleClearRoom = () => {
 		dispatch(clearRoom());
 		setFloorColor("#cccccc");
+	};
+
+	const handleRiddleSelection = (riddle) => {
+		// If this riddle is already selected in Redux for positioning
+		if (selectedRiddle === riddle.id) {
+			// Deselect it from Redux and select it for editing
+			dispatch(setSelectedRiddle(null));
+			setRiddleForm({
+				id: riddle.id,
+				title: riddle.data?.title || "",
+				type: riddle.type || RIDDLE_TYPES.KNOWLEDGE,
+				question: riddle.data?.question || "",
+				answer: riddle.data?.answer || "",
+				hints: riddle.data?.hints || [],
+				isEditing: true,
+			});
+		}
+		// If this riddle is already being edited
+		else if (riddleForm.id === riddle.id && riddleForm.isEditing) {
+			// Switch to positioning mode
+			setRiddleForm({
+				...riddleForm,
+				isEditing: false,
+			});
+			dispatch(setSelectedRiddle(riddle.id));
+		}
+		// If it's not selected at all
+		else {
+			// Select for editing
+			setRiddleForm({
+				id: riddle.id,
+				title: riddle.data?.title || "",
+				type: riddle.type || RIDDLE_TYPES.KNOWLEDGE,
+				question: riddle.data?.question || "",
+				answer: riddle.data?.answer || "",
+				hints: riddle.data?.hints || [],
+				isEditing: true,
+			});
+			dispatch(setSelectedRiddle(null));
+		}
 	};
 
 	useEffect(() => {
@@ -825,7 +885,6 @@ const RightSidebar = () => {
 							Zarządzanie zagadkami
 						</h4>
 
-						{/* Selected Riddle Indicator for positioning */}
 						{selectedRiddle && (
 							<div className='mb-4 p-2 bg-yellow-600 bg-opacity-20 rounded'>
 								<div className='flex justify-between items-center'>
@@ -835,7 +894,7 @@ const RightSidebar = () => {
 									<button
 										onClick={() => dispatch(setSelectedRiddle(null))}
 										className='text-xs text-red-400'>
-										Odznacz
+										Anuluj
 									</button>
 								</div>
 								<p className='text-xs text-gray-300 mt-1'>
@@ -844,7 +903,6 @@ const RightSidebar = () => {
 							</div>
 						)}
 
-						{/* List of existing riddles */}
 						{currentRoom?.riddles && currentRoom.riddles.length > 0 ? (
 							<div className='mb-4'>
 								<h5 className='text-sm font-bold text-white mb-2'>
@@ -855,36 +913,13 @@ const RightSidebar = () => {
 										<li
 											key={riddle.id}
 											className={`flex justify-between items-center mb-2 p-2 ${
-												selectedRiddleId === riddle.id
+												riddleForm.id === riddle.id && riddleForm.isEditing
 													? "bg-gray-600"
 													: selectedRiddle === riddle.id
 													? "bg-mainMint bg-opacity-20"
 													: "bg-gray-700"
 											} rounded cursor-pointer`}
-											onClick={() => {
-												if (selectedRiddle === riddle.id) {
-													// If already selected for positioning, select for editing
-													dispatch(setSelectedRiddle(null));
-													setSelectedRiddleId(riddle.id);
-													setRiddleTitle(riddle.data?.title || "");
-													setRiddleType(riddle.type || RIDDLE_TYPES.KNOWLEDGE);
-													setRiddleQuestion(riddle.data?.question || "");
-													setRiddleAnswer(riddle.data?.answer || "");
-													setRiddleHints(riddle.data?.hints || []);
-												} else if (selectedRiddleId === riddle.id) {
-													// If already selected for editing, select for positioning
-													setSelectedRiddleId(null);
-													dispatch(setSelectedRiddle(riddle.id));
-												} else {
-													// Not selected at all, select for editing
-													setSelectedRiddleId(riddle.id);
-													setRiddleTitle(riddle.data?.title || "");
-													setRiddleType(riddle.type || RIDDLE_TYPES.KNOWLEDGE);
-													setRiddleQuestion(riddle.data?.question || "");
-													setRiddleAnswer(riddle.data?.answer || "");
-													setRiddleHints(riddle.data?.hints || []);
-												}
-											}}>
+											onClick={() => handleRiddleSelection(riddle)}>
 											<div className='flex items-center'>
 												<div
 													className='w-4 h-4 mr-2 rounded-full'
@@ -901,12 +936,17 @@ const RightSidebar = () => {
 												</span>
 											</div>
 											<div className='flex'>
-												{selectedRiddleId !== riddle.id && (
+												{!(
+													riddleForm.id === riddle.id && riddleForm.isEditing
+												) && (
 													<button
 														onClick={(e) => {
 															e.stopPropagation();
 															dispatch(setSelectedRiddle(riddle.id));
-															setSelectedRiddleId(null);
+															setRiddleForm({
+																...riddleForm,
+																isEditing: false,
+															});
 														}}
 														className='text-blue-400 text-xs mr-2'>
 														Przenieś
@@ -934,20 +974,24 @@ const RightSidebar = () => {
 						{/* Form for adding/editing riddles */}
 						<div className='mb-4'>
 							<h5 className='text-sm font-bold text-white mb-2'>
-								{selectedRiddleId ? "Edytuj zagadkę" : "Dodaj nową zagadkę"}
+								{riddleForm.isEditing ? "Edytuj zagadkę" : "Dodaj nową zagadkę"}
 							</h5>
 
 							<input
 								type='text'
-								value={riddleTitle}
-								onChange={(e) => setRiddleTitle(e.target.value)}
+								value={riddleForm.title}
+								onChange={(e) =>
+									setRiddleForm({ ...riddleForm, title: e.target.value })
+								}
 								placeholder='Tytuł zagadki'
 								className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'
 							/>
 
 							<select
-								value={riddleType}
-								onChange={(e) => setRiddleType(e.target.value)}
+								value={riddleForm.type}
+								onChange={(e) =>
+									setRiddleForm({ ...riddleForm, type: e.target.value })
+								}
 								className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'>
 								{Object.entries(RIDDLE_TYPES).map(([key, value]) => (
 									<option key={key} value={value}>
@@ -957,16 +1001,20 @@ const RightSidebar = () => {
 							</select>
 
 							<textarea
-								value={riddleQuestion}
-								onChange={(e) => setRiddleQuestion(e.target.value)}
+								value={riddleForm.question}
+								onChange={(e) =>
+									setRiddleForm({ ...riddleForm, question: e.target.value })
+								}
 								placeholder='Treść zagadki'
 								className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm h-20 mb-2'
 							/>
 
 							<input
 								type='text'
-								value={riddleAnswer}
-								onChange={(e) => setRiddleAnswer(e.target.value)}
+								value={riddleForm.answer}
+								onChange={(e) =>
+									setRiddleForm({ ...riddleForm, answer: e.target.value })
+								}
 								placeholder='Odpowiedź'
 								className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'
 							/>
@@ -976,17 +1024,17 @@ const RightSidebar = () => {
 								<label className='text-xs text-gray-300 block mb-1'>
 									Podpowiedzi:
 								</label>
-								{riddleHints.map((hint, index) => (
+								{riddleForm.hints.map((hint, index) => (
 									<div
 										key={index}
 										className='flex justify-between items-center mb-1'>
 										<span className='text-xs text-gray-300'>{hint}</span>
 										<button
-											onClick={() =>
-												setRiddleHints(
-													riddleHints.filter((_, i) => i !== index),
-												)
-											}
+											onClick={() => {
+												const newHints = [...riddleForm.hints];
+												newHints.splice(index, 1);
+												setRiddleForm({ ...riddleForm, hints: newHints });
+											}}
 											className='text-red-500 text-xs'>
 											Usuń
 										</button>
@@ -1010,7 +1058,7 @@ const RightSidebar = () => {
 
 							{/* Action buttons */}
 							<div className='flex space-x-2'>
-								{selectedRiddleId ? (
+								{riddleForm.isEditing ? (
 									<>
 										<button
 											onClick={handleUpdateRiddle}
@@ -1028,9 +1076,9 @@ const RightSidebar = () => {
 										onClick={handleAddRiddle}
 										className='w-full py-2 bg-mainMint text-gray-700 rounded'
 										disabled={
-											!riddleTitle.trim() ||
-											!riddleQuestion.trim() ||
-											!riddleAnswer.trim()
+											!riddleForm.title.trim() ||
+											!riddleForm.question.trim() ||
+											!riddleForm.answer.trim()
 										}>
 										Dodaj zagadkę
 									</button>
@@ -1051,6 +1099,25 @@ const RightSidebar = () => {
 					<div>
 						<h4 className='text-md font-bold text-white mb-4'>Przedmioty</h4>
 
+						{/* Selected Prop Indicator for positioning */}
+						{selectedProp && (
+							<div className='mb-4 p-2 bg-yellow-600 bg-opacity-20 rounded'>
+								<div className='flex justify-between items-center'>
+									<span className='text-sm text-white'>
+										Wybrany przedmiot do przeniesienia
+									</span>
+									<button
+										onClick={() => dispatch(setSelectedProp(null))}
+										className='text-xs text-red-400'>
+										Anuluj
+									</button>
+								</div>
+								<p className='text-xs text-gray-300 mt-1'>
+									Kliknij na siatkę, aby przenieść przedmiot
+								</p>
+							</div>
+						)}
+
 						{/* Current Room Props */}
 						<h5 className='text-sm font-bold text-white mb-2'>
 							Przedmioty w pokoju
@@ -1060,7 +1127,11 @@ const RightSidebar = () => {
 								{currentRoom.props.map((prop) => (
 									<li
 										key={prop.id}
-										className='flex justify-between items-center mb-2 p-2 bg-gray-700 rounded'>
+										className={`flex justify-between items-center mb-2 p-2 ${
+											selectedProp === prop.id
+												? "bg-mainMint bg-opacity-20"
+												: "bg-gray-700"
+										} rounded`}>
 										<div className='flex items-center'>
 											<div className='w-8 h-8 mr-2 bg-gray-600 rounded overflow-hidden'>
 												<img
@@ -1071,11 +1142,24 @@ const RightSidebar = () => {
 											</div>
 											<span className='text-xs'>{prop.name}</span>
 										</div>
-										<button
-											onClick={() => handleRemoveProp(prop.id)}
-											className='text-red-500 text-xs'>
-											Usuń
-										</button>
+										<div className='flex'>
+											<button
+												onClick={() =>
+													dispatch(
+														setSelectedProp(
+															selectedProp === prop.id ? null : prop.id,
+														),
+													)
+												}
+												className='text-blue-400 text-xs mr-2'>
+												{selectedProp === prop.id ? "Anuluj" : "Przenieś"}
+											</button>
+											<button
+												onClick={() => handleRemoveProp(prop.id)}
+												className='text-red-500 text-xs'>
+												Usuń
+											</button>
+										</div>
 									</li>
 								))}
 							</ul>

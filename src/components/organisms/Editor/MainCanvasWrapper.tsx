@@ -8,12 +8,11 @@ import {
 	updateGrid,
 	addDoor,
 	setStartingPoint,
-	addRiddle,
+	updateRiddlePosition,
+	updatePropPosition,
 	clearRoom,
 	updateWalls,
-	selectedRiddle,
 } from "../../../store/slices/editorSlice";
-import { v4 as uuidv4 } from "uuid";
 
 const GRID_SIZE = 40; // Size of each grid cell
 const ROOM_WIDTH = 30; // Number of columns
@@ -24,6 +23,13 @@ const MainCanvasWrapper: React.FC = () => {
 	const selectedTool = useSelector(
 		(state: RootState) => state.editor.selectedTool,
 	);
+	const selectedRiddle = useSelector(
+		(state: RootState) => state.editor.selectedRiddle,
+	);
+	const selectedProp = useSelector(
+		(state: RootState) => state.editor.selectedProp,
+	);
+
 	const currentRoom = useSelector((state: RootState) => {
 		const escapeRoom = state.editor.escapeRooms.find(
 			(er) => er.id === state.editor.currentEscapeRoomId,
@@ -127,6 +133,27 @@ const MainCanvasWrapper: React.FC = () => {
 
 	const handleCellAction = (row: number, col: number) => {
 		const key = `${row}-${col}`;
+		// If a riddle is selected, update its position
+		if (selectedRiddle && selectedTool === "riddle") {
+			dispatch(
+				updateRiddlePosition({
+					riddleId: selectedRiddle,
+					position: { row, col },
+				}),
+			);
+			return; // Exit the function early
+		}
+
+		if (selectedProp && selectedTool === "props") {
+			dispatch(
+				updatePropPosition({
+					propId: selectedProp,
+					position: { row, col },
+				}),
+			);
+			return;
+		}
+
 		switch (selectedTool) {
 			case "paintFloor":
 				if (!floorAccepted) {
@@ -145,45 +172,6 @@ const MainCanvasWrapper: React.FC = () => {
 			case "startPoint":
 				dispatch(setStartingPoint({ row, col })); // Save starting point in grid coordinates
 				break;
-			case "props":
-				if (selectedPropFromLibrary) {
-					dispatch(
-						addProp({
-							roomId: currentRoom.id,
-							prop: {
-								id: `prop-${uuidv4()}`,
-								name: selectedPropFromLibrary.name,
-								imageUrl: selectedPropFromLibrary.imageUrl,
-								position: { row, col },
-								rotation: 0,
-								hasCollider: selectedPropFromLibrary.hasCollider,
-							},
-						}),
-					);
-				}
-				break;
-
-			case "riddle":
-				// Check if we already have 5 riddles
-				if (currentRoom?.riddles && currentRoom.riddles.length >= 5) {
-					console.log("Maximum number of riddles (5) reached");
-					return;
-				}
-
-				dispatch(
-					addRiddle({
-						id: `riddle-${uuidv4()}`, // Use uuidv4 for unique IDs
-						position: { row, col }, // Use row/col format instead of x/y
-						type: "knowledge", // Default type
-						title: "New Riddle",
-						question: "What is the question?",
-						answer: "",
-						hints: [],
-						options: {},
-					}),
-				);
-				break;
-
 			case "walls":
 				if (floorAccepted) {
 					dispatch(updateWalls({ key, color: wallColor })); // Update wall color
@@ -501,21 +489,15 @@ const MainCanvasWrapper: React.FC = () => {
 	};
 
 	const renderProps = () => {
-		console.log("Attempting to render props");
-
 		if (!currentRoom?.props || currentRoom.props.length === 0) {
-			console.log("No props to render");
 			return null;
 		}
 
-		console.log(`Rendering ${currentRoom.props.length} props`);
-
 		return currentRoom.props.map((prop) => {
-			// Get the image for this specific prop from our state
 			const propImage = propImages[prop.id];
+			const isSelected = prop.id === selectedProp;
 
 			if (!propImage) {
-				console.log(`No image loaded yet for prop ${prop.id}`);
 				return null;
 			}
 
@@ -532,9 +514,10 @@ const MainCanvasWrapper: React.FC = () => {
 						y: GRID_SIZE / propImage.height,
 					}}
 					fillPatternRotation={prop.rotation || 0}
-					stroke={prop.hasCollider ? "green" : "transparent"}
-					strokeWidth={prop.hasCollider ? 2 : 0}
-					onClick={() => setSelectedPropOnCanvas(prop.id)}
+					stroke={
+						isSelected ? "#FF9900" : prop.hasCollider ? "green" : "transparent"
+					}
+					strokeWidth={isSelected ? 3 : prop.hasCollider ? 2 : 0}
 				/>
 			);
 		});
@@ -569,7 +552,6 @@ const MainCanvasWrapper: React.FC = () => {
 						height={GRID_SIZE / 2}
 						fill={isSelected ? "#FF9900" : "#3BCEAC"}
 						cornerRadius={GRID_SIZE / 4}
-						onClick={() => dispatch(setSelectedRiddle(riddle.id))}
 					/>
 				</React.Fragment>
 			);

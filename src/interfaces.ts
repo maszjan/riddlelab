@@ -4,18 +4,15 @@ export interface User {
 	email: string;
 }
 
-
 export interface Token {
 	accessToken: string;
-	expiresIn: number; 
+	expiresIn: number;
 }
-
 
 export interface UserState {
 	user: User | null;
 	token: string | null;
 }
-
 
 export interface SetUserPayload {
 	id: string;
@@ -28,4 +25,12 @@ export interface SetTokenPayload {
 	expiresIn: number;
 }
 
-
+export interface RiddleFormState {
+	id: string | null;
+	title: string;
+	type: string;
+	question: string;
+	answer: string;
+	hints: string[];
+	isEditing: boolean;
+}

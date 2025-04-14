@@ -76,6 +76,7 @@ interface EditorState {
 		| "metadata"
 		| "roomManager";
 	selectedRiddle: string | null;
+	selectedProp: string | null;
 }
 
 const initialState: EditorState = {
@@ -264,7 +265,6 @@ const editorSlice = createSlice({
 				}
 			}
 		},
-
 		updateRiddle(
 			state,
 			action: PayloadAction<{
@@ -304,7 +304,25 @@ const editorSlice = createSlice({
 					(r) => r.id === action.payload.riddleId,
 				);
 				if (riddleIndex !== -1) {
-					room.riddles[riddleIndex].position = action.payload.position;
+					const newPosition = action.payload.position;
+
+					// Validate the riddle position before updating
+					if (isRiddleValid(room.grid, newPosition)) {
+						room.riddles[riddleIndex].position = newPosition;
+						console.log(
+							`Riddle moved to (${newPosition.row}, ${newPosition.col})`,
+						);
+					} else {
+						console.warn("Cannot move riddle to invalid grid position");
+						// Optionally suggest a valid position
+						const validPosition = suggestValidPosition(room.grid);
+						if (validPosition) {
+							room.riddles[riddleIndex].position = validPosition;
+							console.log(
+								`Riddle auto-moved to valid position (${validPosition.row}, ${validPosition.col})`,
+							);
+						}
+					}
 				}
 			}
 		},
@@ -509,29 +527,48 @@ const editorSlice = createSlice({
 				);
 			}
 		},
-		updateProp(
+		updatePropPosition(
 			state,
 			action: PayloadAction<{
-				roomId: string;
 				propId: string;
-				updates: Partial<Prop>;
+				position: { row: number; col: number };
 			}>,
 		) {
-			const room = state.escapeRooms
-				.flatMap((er) => er.rooms)
-				.find((r) => r.id === action.payload.roomId);
+			const escapeRoom = state.escapeRooms.find(
+				(er) => er.id === state.currentEscapeRoomId,
+			);
+			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
 			if (room) {
 				const propIndex = room.props.findIndex(
 					(p) => p.id === action.payload.propId,
 				);
 				if (propIndex !== -1) {
-					room.props[propIndex] = {
-						...room.props[propIndex],
-						...action.payload.updates,
-					};
+					const propPosition = action.payload.position;
+
+					// Validate the prop position before updating
+					if (isPropValid(room.grid, propPosition)) {
+						room.props[propIndex].position = propPosition;
+						console.log(
+							`Prop moved to (${propPosition.row}, ${propPosition.col})`,
+						);
+					} else {
+						console.warn("Cannot move prop to invalid grid position");
+						// Optionally suggest a valid position
+						const validPosition = suggestValidPosition(room.grid);
+						if (validPosition) {
+							room.props[propIndex].position = validPosition;
+							console.log(
+								`Prop auto-moved to valid position (${validPosition.row}, ${validPosition.col})`,
+							);
+						}
+					}
 				}
 			}
 		},
+		setSelectedProp(state, action: PayloadAction<string | null>) {
+			state.selectedProp = action.payload;
+		},
+
 		addRoom(state, action: PayloadAction<Room>) {
 			const escapeRoom = state.escapeRooms.find(
 				(er) => er.id === action.payload.escapeRoomId,
@@ -586,7 +623,6 @@ const editorSlice = createSlice({
 export const {
 	setCurrentEscapeRoom,
 	addRoom,
-	selectedRiddle,
 	updateRiddle,
 	removeRiddle,
 	setSelectedRiddle,
@@ -600,9 +636,10 @@ export const {
 	setDoorTexture,
 	addRiddle,
 	setStartingPoint,
+	setSelectedProp,
 	addProp,
 	removeProp,
-	updateProp,
+	updatePropPosition,
 	updateGrid,
 	updateWalls,
 	updateWallThickness,
