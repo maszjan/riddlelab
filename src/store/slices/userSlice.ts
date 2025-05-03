@@ -7,7 +7,7 @@ const saveToCookies = (
 	value: string,
 	expirationMinutes: number,
 ) => {
-	Cookies.set(key, value, { expires: expirationMinutes / 1440 }); // js-cookie uses days as the unit for expiration
+	Cookies.set(key, value, { expires: expirationMinutes / 1440 }); 
 };
 
 const removeFromCookies = (key: string) => {

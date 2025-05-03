@@ -4,11 +4,13 @@ import Footer from "../components/organisms/Footer";
 
 const RootLayout = () => {
 	return (
-		<>
+		<div className='flex flex-col min-h-screen'>
 			<Navbar />
-			<Outlet />
+			<div>
+				<Outlet />
+			</div>
 			<Footer />
-		</>
+		</div>
 	);
 };
 
