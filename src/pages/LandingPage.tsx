@@ -1,5 +1,4 @@
 import React from "react";
-import Button from "../components/atoms/Button";
 
 const LandingPage: React.FC = () => {
 	return (
@@ -7,7 +6,6 @@ const LandingPage: React.FC = () => {
 			<h1 className='text-4xl font-bold text-mainMint text-center'>
 				Aplikacja w trakcie budowy...
 			</h1>
-			<Button to='editor' text='Przejdź do edytora' />
 		</div>
 	);
 };

@@ -1,9 +1,11 @@
 import React from "react";
+import AssetLibrary from "../components/organisms/Assets/AssetLibrary";
 
 const MyAssetsPage: React.FC = () => {
 	return (
-		<div className='flex flex-col h-screen justify-center items-center'>
-			<h1 className='text-3xl font-bold mb-4'>Moje assety</h1>
+		<div className='container mx-auto p-6'>
+			<h1 className='text-3xl font-bold mb-6 text-mainMint'>Moje zasoby</h1>
+			<AssetLibrary />
 		</div>
 	);
 };

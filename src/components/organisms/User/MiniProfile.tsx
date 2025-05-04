@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { createPortal } from "react-dom";
 import useLogout from "../../../hooks/useLogout";
 import { User } from "../../interfaces";
 import AvatarPreview from "../../molecules/AvatarPreview";
@@ -12,10 +13,16 @@ const MiniProfile: React.FC<MiniProfileProps> = ({ user }) => {
 	const logout = useLogout();
 	const [menuOpen, setMenuOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
+	const buttonRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+			if (
+				menuRef.current &&
+				!menuRef.current.contains(event.target as Node) &&
+				buttonRef.current &&
+				!buttonRef.current.contains(event.target as Node)
+			) {
 				setMenuOpen(false);
 			}
 		};
@@ -56,9 +63,21 @@ const MiniProfile: React.FC<MiniProfileProps> = ({ user }) => {
 		}
 	};
 
+	const getMenuPosition = () => {
+		if (!buttonRef.current) return {};
+
+		const rect = buttonRef.current.getBoundingClientRect();
+		return {
+			position: "fixed",
+			top: `${rect.bottom + window.scrollY}px`,
+			left: `${rect.right - 100}px`,
+		};
+	};
+
 	return (
-		<div className='relative' ref={menuRef}>
+		<div className='relative'>
 			<div
+				ref={buttonRef}
 				className='flex items-center space-x-2 cursor-pointer'
 				onClick={() => setMenuOpen(!menuOpen)}>
 				<div className='w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center'>
@@ -67,33 +86,37 @@ const MiniProfile: React.FC<MiniProfileProps> = ({ user }) => {
 				<span className='hidden md:block'>{user.name}</span>
 			</div>
 
-			{/* Menu rozwijane */}
-			{menuOpen && (
-				<div className='absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-10'>
-					<Link
-						to='/profile'
-						className='block px-4 py-2 text-sm text-white hover:text-mainMint'
-						onClick={() => setMenuOpen(false)}>
-						Mój profil
-					</Link>
-					<hr />
-					<Link
-						to='/settings'
-						className='block px-4 py-2 text-sm text-white hover:text-mainMint'
-						onClick={() => setMenuOpen(false)}>
-						Ustawienia
-					</Link>
-					<hr />
-					<button
-						onClick={() => {
-							setMenuOpen(false);
-							logout();
-						}}
-						className='block w-full text-left px-4 py-2 text-sm text-white hover:text-mainMint'>
-						Wyloguj się
-					</button>
-				</div>
-			)}
+			{menuOpen &&
+				createPortal(
+					<div
+						ref={menuRef}
+						className='w-28 bg-gray-800 rounded-md shadow-lg py-1 z-50 '
+						style={getMenuPosition()}>
+						<Link
+							to='/profile'
+							className='block px-4 py-2 text-sm text-white hover:text-mainMint'
+							onClick={() => setMenuOpen(false)}>
+							Mój profil
+						</Link>
+						<hr className='border-gray-700' />
+						<Link
+							to='/settings'
+							className='block px-4 py-2 text-sm text-white hover:text-mainMint'
+							onClick={() => setMenuOpen(false)}>
+							Ustawienia
+						</Link>
+						<hr className='border-gray-700' />
+						<button
+							onClick={() => {
+								setMenuOpen(false);
+								logout();
+							}}
+							className='block w-full text-left px-4 py-2 text-sm text-white hover:text-mainMint'>
+							Wyloguj się
+						</button>
+					</div>,
+					document.body,
+				)}
 		</div>
 	);
 };

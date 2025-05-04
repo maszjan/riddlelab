@@ -48,3 +48,39 @@ export interface RiddleFormState {
 	hints: string[];
 	isEditing: boolean;
 }
+
+export interface Asset {
+	id: number;
+	name: string;
+	type: string;
+	image_url: string;
+	has_collider: boolean;
+	owner_id: number | null;
+	is_public: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface AssetsResponse {
+	door: Asset[];
+	floor: Asset[];
+	prop: Asset[];
+	riddle: Asset[];
+}
+
+export interface Asset {
+	id: number;
+	name: string;
+	type: string;
+	image_url: string;
+	has_collider: boolean;
+	owner_id: number | null;
+	is_public: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface AssetResponse {
+	asset: Asset;
+	image: string;
+}

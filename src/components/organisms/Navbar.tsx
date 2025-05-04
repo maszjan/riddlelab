@@ -21,22 +21,12 @@ const Navbar: React.FC = () => {
 				<div className='flex items-center font-semibold space-x-6'>
 					{user ? (
 						<>
-							{/* Linki dla zalogowanego użytkownika */}
-							<Link
-								to='/dashboard'
-								className='hover:text-mainBlue transition-colors duration-200'>
-								Dashboard
-							</Link>
-							<Link
-								to='/my-assets'
-								className='hover:text-mainBlue transition-colors duration-200'>
-								Moje zasoby
-							</Link>
-							<Link
-								to='/create-room'
-								className='hover:text-mainBlue transition-colors duration-200'>
-								Stwórz pokój
-							</Link>
+							<button className='px-5 py-2 font-semibold rounded-lg text-gray-700 border-2 border-gray-700 hover:bg-gray-700 hover:text-mainMint transition-colors duration-200'>
+								<Link to='/my-assets'>Assety</Link>
+							</button>
+							<button className='px-5 py-2 font-semibold rounded-lg text-gray-700 border-2 border-gray-700 hover:bg-gray-700 hover:text-mainMint transition-colors duration-200'>
+								<Link to='/editor'>Tworzenie</Link>
+							</button>
 
 							{/* Komponent MiniProfile */}
 							<MiniProfile user={user} />
