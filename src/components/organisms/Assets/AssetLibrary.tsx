@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import useGetMyAssets from "../../../hooks/useGetMyAssets";
 import AssetCard from "../../atoms/AssetCard";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 
@@ -10,14 +9,14 @@ const assetTypeNames = {
 	riddle: "Zagadki",
 };
 
-const AssetLibrary: React.FC = () => {
-	const { assets, loading, error, hasFetched } = useGetMyAssets();
+const AssetLibrary = ({ assets, loading, error }) => {
 	const [expandedTypes, setExpandedTypes] = useState({
 		door: true,
 		floor: true,
 		prop: true,
 		riddle: true,
 	});
+	const [showPublicAssets, setShowPublicAssets] = useState(true);
 
 	const toggleType = (type) => {
 		setExpandedTypes((prev) => ({
@@ -26,7 +25,11 @@ const AssetLibrary: React.FC = () => {
 		}));
 	};
 
-	if (loading && !hasFetched) {
+	const togglePublicAssets = () => {
+		setShowPublicAssets(!showPublicAssets);
+	};
+
+	if (loading) {
 		return (
 			<div className='flex justify-center items-center h-64'>
 				<p className='text-xl text-gray-400'>Ładowanie zasobów...</p>
@@ -50,15 +53,40 @@ const AssetLibrary: React.FC = () => {
 		);
 	}
 
+	// Filtruj zasoby w zależności od ustawienia showPublicAssets
+	const filteredAssets = {};
+	Object.entries(assets).forEach(([type, typeAssets]) => {
+		filteredAssets[type] = typeAssets.filter((asset) =>
+			showPublicAssets ? true : !asset.is_public,
+		);
+	});
+
 	return (
 		<div className='asset-library'>
-			{Object.entries(assets).map(([type, typeAssets]) => (
+			<div className='flex justify-end mb-4'>
+				<label className='inline-flex items-center cursor-pointer'>
+					<span className='mr-3 text-sm font-medium text-gray-300'>
+						Pokaż publiczne zasoby
+					</span>
+					<div className='relative'>
+						<input
+							type='checkbox'
+							className='sr-only peer'
+							checked={showPublicAssets}
+							onChange={togglePublicAssets}
+						/>
+						<div className='w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mainMint'></div>
+					</div>
+				</label>
+			</div>
+
+			{Object.entries(filteredAssets).map(([type, typeAssets]) => (
 				<div key={type} className='asset-category mb-8'>
 					<div
 						className='flex justify-between items-center cursor-pointer'
 						onClick={() => toggleType(type)}>
 						<h2 className='text-2xl font-bold capitalize mb-4 text-mainMint'>
-							{assetTypeNames[type] || type}
+							{assetTypeNames[type] || type} ({typeAssets.length})
 						</h2>
 						<div className='text-mainMint mb-4'>
 							{expandedTypes[type] ? <FaChevronUp /> : <FaChevronDown />}

@@ -84,3 +84,10 @@ export interface AssetResponse {
 	asset: Asset;
 	image: string;
 }
+
+export interface AssetData {
+	asset_count: number;
+	asset_limit: number;
+	is_unlimited: boolean;
+	asset_percentage: number;
+}
