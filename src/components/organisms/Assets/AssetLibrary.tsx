@@ -9,7 +9,7 @@ const assetTypeNames = {
 	riddle: "Zagadki",
 };
 
-const AssetLibrary = ({ assets, loading, error }) => {
+const AssetLibrary = ({ assets, loading, error, refetchAssets }) => {
 	const [expandedTypes, setExpandedTypes] = useState({
 		door: true,
 		floor: true,
@@ -27,6 +27,13 @@ const AssetLibrary = ({ assets, loading, error }) => {
 
 	const togglePublicAssets = () => {
 		setShowPublicAssets(!showPublicAssets);
+	};
+
+	const handleAssetDelete = () => {
+		
+		if (refetchAssets) {
+			refetchAssets();
+		}
 	};
 
 	if (loading) {
@@ -53,7 +60,6 @@ const AssetLibrary = ({ assets, loading, error }) => {
 		);
 	}
 
-	// Filtruj zasoby w zależności od ustawienia showPublicAssets
 	const filteredAssets = {};
 	Object.entries(assets).forEach(([type, typeAssets]) => {
 		filteredAssets[type] = typeAssets.filter((asset) =>
@@ -100,7 +106,11 @@ const AssetLibrary = ({ assets, loading, error }) => {
 							{typeAssets.length > 0 ? (
 								<div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 transition-all duration-300'>
 									{typeAssets.map((asset) => (
-										<AssetCard key={asset.id} asset={asset} />
+										<AssetCard
+											key={asset.id}
+											asset={asset}
+											onDelete={handleAssetDelete}
+										/>
 									))}
 								</div>
 							) : (

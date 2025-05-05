@@ -21,13 +21,26 @@ const Navbar: React.FC = () => {
 				<div className='flex items-center font-semibold space-x-6'>
 					{user ? (
 						<>
-							<button className='px-5 py-2 font-semibold rounded-lg text-gray-700 border-2 border-gray-700 hover:bg-gray-700 hover:text-mainMint transition-colors duration-200'>
-								<Link to='/my-assets'>Assety</Link>
-							</button>
-							<button className='px-5 py-2 font-semibold rounded-lg text-gray-700 border-2 border-gray-700 hover:bg-gray-700 hover:text-mainMint transition-colors duration-200'>
-								<Link to='/editor'>Tworzenie</Link>
-							</button>
-
+							<Link
+								className='px-5 py-2 font-semibold rounded-lg text-gray-700 border-2 border-gray-700 hover:bg-gray-700 hover:text-mainMint transition-colors duration-200'
+								to='/escape-rooms'>
+								Graj
+							</Link>
+							<Link
+								className='px-5 py-2 font-semibold rounded-lg text-gray-700 border-2 border-gray-700 hover:bg-gray-700 hover:text-mainMint transition-colors duration-200'
+								to='/leaderboard'>
+								Ranking
+							</Link>
+							<Link
+								className='px-5 py-2 font-semibold rounded-lg text-gray-700 border-2 border-gray-700 hover:bg-gray-700 hover:text-mainMint transition-colors duration-200'
+								to='/editor'>
+								Twórz 
+							</Link>
+							<Link
+								className='px-5 py-2 font-semibold rounded-lg text-gray-700 border-2 border-gray-700 hover:bg-gray-700 hover:text-mainMint transition-colors duration-200'
+								to='/my-assets'>
+								Assety
+							</Link>
 							{/* Komponent MiniProfile */}
 							<MiniProfile user={user} />
 						</>

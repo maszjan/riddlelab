@@ -62,27 +62,22 @@ const MainCanvasWrapper: React.FC = () => {
 			textureName: string,
 		) => {
 			if (url) {
-				console.log(`Loading ${textureName} texture from URL:`, url);
+				const fullUrl = url.startsWith("http")
+					? url
+					: `${import.meta.env.VITE_API_URL}${url}`;
+
+				console.log(`Loading ${textureName} texture from URL:`, fullUrl);
 				const img = new Image();
-				img.src = url;
+				img.src = fullUrl;
 				img.onload = () => {
-					console.log(
-						`${textureName} texture loaded successfully, dimensions:`,
-						img.width,
-						"x",
-						img.height,
-					);
+					console.log(`${textureName} texture loaded successfully`);
 					setTexture(img);
 				};
 				img.onerror = (err) => {
-					console.error(
-						`Failed to load ${textureName} texture from URL: ${url}`,
-						err,
-					);
+					console.error(`Failed to load ${textureName} texture`, err);
 					setTexture(null);
 				};
 			} else {
-				console.log(`No ${textureName} texture URL provided`);
 				setTexture(null);
 			}
 		};

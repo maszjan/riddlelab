@@ -3,9 +3,10 @@ import { useSelector } from "react-redux";
 import { selectToken } from "../store/slices/userSlice";
 
 const baseURL = import.meta.env.VITE_API_URL;
+const apiBaseURL = `${baseURL}/api/v1`;
 
 const apiClient = axios.create({
-	baseURL,
+	baseURL: apiBaseURL,
 	headers: {
 		"Content-Type": "application/json",
 		Accept: "application/json",
@@ -16,7 +17,7 @@ const useAuthorizedApiClient = () => {
 	const token = useSelector(selectToken);
 
 	const authorizedApiClient = axios.create({
-		baseURL,
+		baseURL: apiBaseURL,
 		headers: {
 			"Content-Type": "application/json",
 			Accept: "application/json",

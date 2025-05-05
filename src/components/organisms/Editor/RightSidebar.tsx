@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { RIDDLE_TYPES } from "../../../utils/riddleHelpers";
 import { RiddleFormState } from "../../../interfaces";
@@ -28,6 +29,8 @@ import {
 import { isGridFilled, isBorderClosed } from "../../../utils/editorHelpers";
 import { MdOutlineTexture } from "react-icons/md";
 import { FiPlusCircle } from "react-icons/fi";
+import AssetPickerModal from "./AssetPickerModal";
+import useGetAsset from "../../../hooks/useGetAsset";
 
 const RightSidebar = () => {
 	const dispatch = useDispatch();
@@ -63,10 +66,14 @@ const RightSidebar = () => {
 		(state: RootState) => state.editor.currentRoomId,
 	);
 
+	const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+	const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
+	const [currentAssetType, setCurrentAssetType] = useState<string>("floor");
+	const { asset: selectedAssetDetails } = useGetAsset(selectedAssetId);
+
 	const [floorColor, setFloorColor] = useState<string | null>(
 		currentRoom?.floorColor || null,
 	);
-	const [selectedTexture, setSelectedTexture] = useState<string | null>(null);
 	const [wallColor, setWallColor] = useState<string>(
 		currentRoom?.wallColor || "#888888",
 	);
@@ -77,9 +84,14 @@ const RightSidebar = () => {
 	const [colorOpacity, setColorOpacity] = useState(1);
 	const [isBorderClosedState, setIsBorderClosedState] = useState(false);
 	const [isGridFilledState, setIsGridFilledState] = useState(false);
-	const [doorTexture, setDoorTextureState] = useState<string | null>(
-		currentRoom?.doorTexture || null,
+
+	const [floorAssetId, setFloorAssetId] = useState<number | null>(
+		currentRoom?.floorTextureAssetId || null,
 	);
+	const [doorAssetId, setDoorAssetId] = useState<number | null>(
+		currentRoom?.doorTextureAssetId || null,
+	);
+
 	const [metadataName, setMetadataName] = useState<string>(
 		currentEscapeRoom?.metadata?.name || "",
 	);
@@ -129,7 +141,7 @@ const RightSidebar = () => {
 		) {
 			const newRiddle = {
 				id: `riddle-${uuidv4()}`,
-				position: { row: 0, col: 0 }, // Default position
+				position: { row: 0, col: 0 },
 				type: riddleForm.type,
 				data: {
 					title: riddleForm.title,
@@ -207,7 +219,7 @@ const RightSidebar = () => {
 	};
 
 	const handleOpacityChange = (opacity: number) => {
-		setColorOpacity(opacity / 100); // Convert percentage to 0-1 range
+		setColorOpacity(opacity / 100);
 	};
 
 	const handleRemoveProp = (propId: string) => {
@@ -222,36 +234,19 @@ const RightSidebar = () => {
 		}
 	};
 
-	const handleDoorTextureChange = (file: File | undefined) => {
-		if (file) {
-			const reader = new FileReader();
-			reader.onload = () => {
-				const textureUrl = reader.result as string;
-				setDoorTextureState(textureUrl);
-				dispatch(setDoorTexture({ texture: textureUrl }));
-			};
-			reader.readAsDataURL(file);
+	const handleApplyDoorTexture = () => {
+		let texturePath = null;
+		if (selectedAssetDetails?.url) {
+			const urlObj = new URL(selectedAssetDetails.url);
+			texturePath = urlObj.pathname;
 		}
-	};
 
-	const handleClearDoorTexture = () => {
-		setDoorTextureState(null);
-		dispatch(setDoorTexture({ texture: null }));
-	};
-
-	const handleFloorTextureChange = (file: File | undefined) => {
-		if (file) {
-			const reader = new FileReader();
-			reader.onload = () => {
-				const textureUrl = reader.result as string;
-				setSelectedTexture(textureUrl);
-			};
-			reader.readAsDataURL(file);
-		}
-	};
-
-	const handleClearTexture = () => {
-		setSelectedTexture(null);
+		dispatch(
+			setDoorTexture({
+				texture: texturePath,
+				textureAssetId: selectedAssetId, // Add the asset ID
+			}),
+		);
 	};
 
 	const handleFloorColorChange = (color: string) => {
@@ -279,10 +274,17 @@ const RightSidebar = () => {
 			  )}, ${parseInt(floorColor.slice(5, 7), 16)}, ${colorOpacity})`
 			: null;
 
+		let texturePath = null;
+		if (selectedAssetDetails?.url) {
+			const urlObj = new URL(selectedAssetDetails.url);
+			texturePath = urlObj.pathname;
+		}
+
 		dispatch(
 			setFloorAndTexture({
 				color: rgbaColor,
-				texture: selectedTexture, // Dispatch the selected texture (or null if cleared)
+				texture: texturePath,
+				textureAssetId: selectedAssetId,
 			}),
 		);
 		dispatch(
@@ -315,7 +317,6 @@ const RightSidebar = () => {
 				const soundtrackUrl = reader.result as string;
 				setSoundtrackPreview(soundtrackUrl);
 				dispatch(updateMetadata({ key: "soundtrack", value: soundtrackUrl }));
-				// Add this line to use setSoundtrack
 				dispatch(setSoundtrack({ soundtrack: soundtrackUrl }));
 			};
 			reader.readAsDataURL(file);
@@ -558,8 +559,21 @@ const RightSidebar = () => {
 			setWallColor(currentRoom.wallColor || "#888888");
 			setWallThickness(currentRoom.wallThickness || 6);
 			setDoorTextureState(currentRoom.doorTexture);
+
+			// Inicjalizuj ID assetów z Redux
+			setFloorAssetId(currentRoom.floorTextureAssetId || null);
+			setDoorAssetId(currentRoom.doorTextureAssetId || null);
+
+			// Ustaw selectedAssetId na podstawie aktualnego narzędzia
+			if (selectedTool === "paintFloor" && currentRoom.floorTextureAssetId) {
+				setSelectedAssetId(currentRoom.floorTextureAssetId);
+				setCurrentAssetType("floor");
+			} else if (selectedTool === "door" && currentRoom.doorTextureAssetId) {
+				setSelectedAssetId(currentRoom.doorTextureAssetId);
+				setCurrentAssetType("door");
+			}
 		}
-	}, [currentRoom]);
+	}, [currentRoom, selectedTool]);
 
 	const renderToolOptions = () => {
 		if (!currentRoom) return null;
@@ -663,35 +677,32 @@ const RightSidebar = () => {
 										Tekstura:
 									</label>
 									<div className='relative'>
-										<input
-											type='file'
-											accept='image/*'
-											onChange={(e) =>
-												handleFloorTextureChange(e.target.files?.[0])
-											}
-											className='hidden'
-											id='floorTextureInput'
-										/>
-										<label
-											htmlFor='floorTextureInput'
+										<button
+											onClick={() => {
+												setCurrentAssetType("floor");
+												setIsAssetModalOpen(true);
+											}}
 											className='flex items-center justify-center w-12 h-12 bg-gray-700 text-white rounded cursor-pointer hover:bg-gray-600'>
 											<MdOutlineTexture className='h-6 w-6' />
-										</label>
+										</button>
 									</div>
 								</div>
 
-								{selectedTexture && (
+								{selectedAssetDetails?.url && (
 									<div className='mt-2 relative'>
 										<div className='relative w-24 h-24 border border-gray-600 rounded overflow-hidden'>
 											<div
 												className='absolute inset-0'
 												style={{
-													backgroundImage: `url(${selectedTexture})`,
+													backgroundImage: `url(${selectedAssetDetails.url})`,
 													backgroundSize: "cover",
 													backgroundPosition: "center",
 												}}></div>
 											<button
-												onClick={handleClearTexture}
+												onClick={() => {
+													setSelectedAssetId(null);
+													setSelectedTexture(null);
+												}}
 												className='absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600'
 												title='Usuń teksturę'>
 												X
@@ -779,36 +790,33 @@ const RightSidebar = () => {
 							<div className='flex items-center justify-between'>
 								<label className='text-lg mt-1 text-gray-300'>Tekstura:</label>
 								<div className='relative'>
-									<input
-										type='file'
-										accept='image/*'
-										onChange={(e) =>
-											handleDoorTextureChange(e.target.files?.[0])
-										}
-										className='hidden'
-										id='doorTextureInput'
-									/>
-									<label
-										htmlFor='doorTextureInput'
+									<button
+										onClick={() => {
+											setCurrentAssetType("door");
+											setIsAssetModalOpen(true);
+										}}
 										className='flex items-center justify-center w-12 h-12 bg-gray-700 text-white rounded cursor-pointer hover:bg-gray-600'>
 										<MdOutlineTexture className='h-6 w-6' />
-									</label>
+									</button>
 								</div>
 							</div>
 
-							{/* Preview the selected door texture */}
-							{doorTexture && (
+							{selectedAssetDetails?.url && currentAssetType === "door" && (
 								<div className='mt-2 relative'>
 									<div className='relative w-24 h-24 border border-gray-600 rounded overflow-hidden'>
 										<div
 											className='absolute inset-0'
 											style={{
-												backgroundImage: `url(${doorTexture})`,
+												backgroundImage: `url(${selectedAssetDetails.url})`,
 												backgroundSize: "cover",
 												backgroundPosition: "center",
 											}}></div>
 										<button
-											onClick={handleClearDoorTexture}
+											onClick={() => {
+												setSelectedAssetId(null);
+												setDoorTextureState(null);
+												dispatch(setDoorTexture({ texture: null }));
+											}}
 											className='absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600'
 											title='Usuń teksturę'>
 											X
@@ -817,51 +825,60 @@ const RightSidebar = () => {
 								</div>
 							)}
 
-							{/* Door Transformation Controls */}
-							{currentRoom?.door && doorTexture && (
-								<div className='mt-4'>
-									<h5 className='text-sm font-bold text-white mb-2'>
-										Transformacje
-									</h5>
+							{currentRoom?.door &&
+								selectedAssetDetails?.url &&
+								currentAssetType === "door" && (
+									<div className='mt-4'>
+										<h5 className='text-sm font-bold text-white mb-2'>
+											Transformacje
+										</h5>
 
-									{/* Rotation Control with both slider and number input */}
-									<div className='mb-2'>
-										<label className='text-sm text-gray-300 block mb-1'>
-											Rotacja tekstury:
-										</label>
-										<div className='flex items-center'>
-											<input
-												type='range'
-												min={0}
-												max={360}
-												value={currentRoom.door.rotation || 0}
-												onChange={(e) =>
-													dispatch(
-														updateDoorTransformation({
-															rotation: parseInt(e.target.value),
-														}),
-													)
-												}
-												className='w-24 accent-mainMint mr-2'
-											/>
-											<input
-												type='number'
-												min={0}
-												max={360}
-												value={currentRoom.door.rotation || 0}
-												onChange={(e) =>
-													dispatch(
-														updateDoorTransformation({
-															rotation: parseInt(e.target.value) || 0,
-														}),
-													)
-												}
-												className='w-16 bg-gray-700 text-white rounded px-2 py-1 text-sm'
-											/>
-											<span className='text-xs text-gray-300 ml-2'>°</span>
+										<div className='mb-2'>
+											<label className='text-sm text-gray-300 block mb-1'>
+												Rotacja drzwi:
+											</label>
+											<div className='flex items-center'>
+												<input
+													type='range'
+													min={0}
+													max={360}
+													value={currentRoom.door.rotation || 0}
+													onChange={(e) =>
+														dispatch(
+															updateDoorTransformation({
+																rotation: parseInt(e.target.value),
+															}),
+														)
+													}
+													className='w-24 accent-mainMint mr-2'
+												/>
+												<input
+													type='number'
+													min={0}
+													max={360}
+													value={currentRoom.door.rotation || 0}
+													onChange={(e) =>
+														dispatch(
+															updateDoorTransformation({
+																rotation: parseInt(e.target.value) || 0,
+															}),
+														)
+													}
+													className='w-16 bg-gray-700 text-white rounded px-2 py-1 text-sm'
+												/>
+												<span className='text-xs text-gray-300 ml-2'>°</span>
+											</div>
 										</div>
 									</div>
-								</div>
+								)}
+
+							{/* Przycisk "Użyj" dla drzwi */}
+							{selectedAssetDetails?.url && currentAssetType === "door" && (
+								<button
+									onClick={handleApplyDoorTexture}
+									className='w-24 bg-mainMint font-semibold text-gray-700 py-2 rounded mt-4'>
+									Użyj
+								</button>
 							)}
 						</div>
 					</div>
@@ -1446,9 +1463,33 @@ const RightSidebar = () => {
 	};
 
 	return (
-		<div className='w-64 pt-14 mx-4 bg-gray-800 p-6 border-l border-gray-600 h-full overflow-y-auto'>
-			{renderToolOptions()}
-		</div>
+		<>
+			<div className='w-64 pt-14 mx-4 bg-gray-800 p-6 border-l border-gray-600 h-full overflow-y-auto'>
+				{renderToolOptions()}
+			</div>
+			<AssetPickerModal
+				isOpen={isAssetModalOpen}
+				onClose={() => setIsAssetModalOpen(false)}
+				onSelect={(assetId) => {
+					setSelectedAssetId(assetId);
+					setIsAssetModalOpen(false);
+
+					if (currentAssetType === "floor") {
+						setSelectedTexture(selectedAssetDetails?.url || null);
+					} else if (currentAssetType === "door") {
+						setDoorTextureState(selectedAssetDetails?.url || null);
+						dispatch(
+							setDoorTexture({ texture: selectedAssetDetails?.url || null }),
+						);
+					}
+				}}
+				assetType={currentAssetType}
+				title={`Wybierz teksturę ${
+					currentAssetType === "floor" ? "podłogi" : "drzwi"
+				}`}
+			/>
+			;
+		</>
 	);
 };
 

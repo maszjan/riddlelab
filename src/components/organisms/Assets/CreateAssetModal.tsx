@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { useAuthorizedApiClient } from "../../../utils/apiHelpers";
 import { useFormik } from "formik";
 import * as Yup from "yup";
+import { createPortal } from "react-dom";
 
 interface CreateAssetModalProps {
 	isOpen: boolean;
-	onClose: (assetAdded?: boolean) => void; 
+	onClose: (assetAdded?: boolean) => void;
 }
 
 const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
@@ -56,7 +57,7 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 				});
 
 				resetForm();
-				onClose(true); 
+				onClose(true);
 			} catch (error) {
 				if (error.response && error.response.data) {
 					setErrors({ name: error.response.data.message });
@@ -71,7 +72,7 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 
 	if (!isOpen) return null;
 
-	return (
+	return createPortal(
 		<div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
 			<div className='bg-gray-800 rounded-lg p-6 w-full max-w-md'>
 				<div className='flex justify-between items-center mb-4'>
@@ -84,7 +85,6 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 				</div>
 
 				<form onSubmit={formik.handleSubmit}>
-					{/* Name field */}
 					<div className='mb-4'>
 						<label
 							htmlFor='name'
@@ -107,7 +107,6 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 						) : null}
 					</div>
 
-					{/* Type field */}
 					<div className='mb-4'>
 						<label
 							htmlFor='type'
@@ -128,7 +127,6 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 						</select>
 					</div>
 
-					{/* Image field */}
 					<div className='mb-4'>
 						<label
 							htmlFor='image'
@@ -157,7 +155,6 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 						</p>
 					</div>
 
-					{/* Collider field - only show for props */}
 					{formik.values.type === "prop" && (
 						<div className='mb-4 flex items-center'>
 							<input
@@ -174,7 +171,6 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 						</div>
 					)}
 
-					{/* Form buttons */}
 					<div className='flex justify-end space-x-3'>
 						<button
 							type='button'
@@ -191,7 +187,8 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 					</div>
 				</form>
 			</div>
-		</div>
+		</div>,
+		document.body,
 	);
 };
 

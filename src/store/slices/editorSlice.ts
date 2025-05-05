@@ -40,12 +40,14 @@ interface Room {
 	wallColor: string;
 	wallThickness: number;
 	floorTexture: string | null;
+	floorTextureAssetId: number | null; // Nowe pole
 	door: {
 		row: number;
 		col: number;
 		rotation: number;
 	} | null;
 	doorTexture: string | null;
+	doorTextureAssetId: number | null; // Nowe pole
 	startingPoint: { row: number; col: number } | null;
 	riddles: Riddle[];
 	props: Prop[];
@@ -194,13 +196,20 @@ const editorSlice = createSlice({
 				}
 			}
 		},
-		setDoorTexture(state, action: PayloadAction<{ texture: string | null }>) {
+		setDoorTexture(
+			state,
+			action: PayloadAction<{
+				texture: string | null;
+				textureAssetId: number | null; // Dodaj ID assetu
+			}>,
+		) {
 			const escapeRoom = state.escapeRooms.find(
 				(er) => er.id === state.currentEscapeRoomId,
 			);
 			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
 			if (room) {
-				room.doorTexture = action.payload.texture; // Set the door texture
+				room.doorTexture = action.payload.texture; // Ścieżka tekstury
+				room.doorTextureAssetId = action.payload.textureAssetId; // ID assetu
 			}
 		},
 		addRiddle(
@@ -447,7 +456,11 @@ const editorSlice = createSlice({
 		},
 		setFloorAndTexture(
 			state,
-			action: PayloadAction<{ color: string; texture: string | null }>,
+			action: PayloadAction<{
+				color: string;
+				texture: string | null;
+				textureAssetId: number | null; // Dodaj ID assetu
+			}>,
 		) {
 			const escapeRoom = state.escapeRooms.find(
 				(er) => er.id === state.currentEscapeRoomId,
@@ -456,6 +469,7 @@ const editorSlice = createSlice({
 			if (room) {
 				room.floorColor = action.payload.color;
 				room.floorTexture = action.payload.texture;
+				room.floorTextureAssetId = action.payload.textureAssetId; // ID assetu
 			}
 		},
 		clearRoom(state) {

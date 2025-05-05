@@ -32,6 +32,11 @@ const MyAssetsPage = () => {
 		}
 	};
 
+	const handleAssetDeleted = () => {
+		refetchAssets();
+		refetchAssetLimit();
+	};
+
 	return (
 		<div className='container mx-auto p-6'>
 			<UserAssetLimit
@@ -45,6 +50,7 @@ const MyAssetsPage = () => {
 				assets={assets}
 				loading={assetsLoading}
 				error={assetsError}
+				refetchAssets={handleAssetDeleted}
 			/>
 
 			<CreateAssetModal isOpen={isModalOpen} onClose={handleCloseModal} />
