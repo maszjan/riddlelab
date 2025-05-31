@@ -1,15 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+export enum RiddleType {
+	KNOWLEDGE = "knowledge",
+	MATH = "math",
+	LANGUAGE = "language",
+	CYPHER = "cypher",
+	PUZZLE_GAME = "puzzleGame",
+}
+
 export const RIDDLE_TYPES = {
-	KNOWLEDGE: "wiedza",
-	MATHEMATICS: "matematyka",
-	LANGUAGE: "język",
-	CIPHER_CAESAR: "szyfr_cezara",
-	CIPHER_VIGENERE: "szyfr_vigenere",
-	CIPHER_MORSE: "kod_morsea",
-	CIPHER_BINARY: "kod_binarny",
-	CIPHER_ATBASH: "szyfr_atbash",
-	CIPHER_SUBSTITUTION: "szyfr_podstawieniowy",
-	PUZZLE: "układanka",
+	KNOWLEDGE: RiddleType.KNOWLEDGE,
+	MATH: RiddleType.MATH,
+	LANGUAGE: RiddleType.LANGUAGE,
+	CYPHER: RiddleType.CYPHER,
+	PUZZLE_GAME: RiddleType.PUZZLE_GAME,
+};
+
+export const RIDDLE_TYPE_LABELS: Record<RiddleType, string> = {
+	[RiddleType.KNOWLEDGE]: "Wiedza",
+	[RiddleType.MATH]: "Matematyka",
+	[RiddleType.LANGUAGE]: "Język",
+	[RiddleType.CYPHER]: "Szyfr",
+	[RiddleType.PUZZLE_GAME]: "Układanka",
 };
 
 export function solveMathRiddle(expression: string): string {

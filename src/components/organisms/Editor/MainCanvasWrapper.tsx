@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import { Stage, Layer, Rect, Line } from "react-konva";
@@ -39,8 +39,6 @@ const MainCanvasWrapper: React.FC = () => {
 		);
 	});
 	const floorTextureUrl = currentRoom?.floorTexture;
-	const paintingColor = currentRoom?.paintingColor || "#cccccc"; // Default painting color
-	const floorColor = currentRoom?.floorColor || null; // Allow null for no color
 	const wallColor = currentRoom?.wallColor || "#888888"; // Get the wall color
 	const wallThickness = currentRoom?.wallThickness || 6; // Get the wall thickness dynamically
 	const floorAccepted = currentRoom?.floorAccepted; // Check if the floor is accepted
@@ -52,83 +50,154 @@ const MainCanvasWrapper: React.FC = () => {
 	const [propImages, setPropImages] = useState<
 		Record<string, HTMLImageElement | null>
 	>({});
+	const [riddleImages, setRiddleImages] = useState<
+		Record<string, HTMLImageElement | null>
+	>({});
+
+	const getImageUrl = (url: string | null): string | null => {
+		if (!url) return null;
+
+		if (url.startsWith("http")) {
+			return url;
+		}
+
+		if (url.startsWith("/storage/")) {
+			return `${import.meta.env.VITE_API_URL}${url}`;
+		} else if (url.startsWith("textures/")) {
+			return `${import.meta.env.VITE_API_URL}/storage/${url}`;
+		} else if (url.startsWith("/")) {
+			return `${import.meta.env.VITE_API_URL}${url}`;
+		} else {
+			return `${import.meta.env.VITE_API_URL}/storage/${url}`;
+		}
+	};
 
 	useEffect(() => {
-		console.log("Loading all textures...");
-
 		const loadTexture = (
 			url: string | undefined,
 			setTexture: React.Dispatch<React.SetStateAction<HTMLImageElement | null>>,
 			textureName: string,
 		) => {
 			if (url) {
-				const fullUrl = url.startsWith("http")
-					? url
-					: `${import.meta.env.VITE_API_URL}${url}`;
-
-				console.log(`Loading ${textureName} texture from URL:`, fullUrl);
-				const img = new Image();
-				img.src = fullUrl;
-				img.onload = () => {
-					console.log(`${textureName} texture loaded successfully`);
-					setTexture(img);
-				};
-				img.onerror = (err) => {
-					console.error(`Failed to load ${textureName} texture`, err);
-					setTexture(null);
-				};
+				const fullUrl = getImageUrl(url);
+				if (fullUrl) {
+					const img = new Image();
+					img.src = fullUrl;
+					img.onload = () => {
+						console.log(`${textureName} texture loaded successfully:`, fullUrl);
+						setTexture(img);
+					};
+					img.onerror = (err) => {
+						console.error(
+							`Failed to load ${textureName} texture:`,
+							fullUrl,
+							err,
+						);
+						setTexture(null);
+					};
+				}
 			} else {
 				setTexture(null);
 			}
 		};
 
 		// Load floor texture
-		loadTexture(floorTextureUrl, setFloorTexture, "floor");
+		if (floorTextureUrl) {
+			console.log("Loading floor texture:", floorTextureUrl);
+			loadTexture(floorTextureUrl, setFloorTexture, "floor");
+		} else {
+			setFloorTexture(null);
+		}
 
 		// Load door texture
-		loadTexture(currentRoom?.doorTexture, setDoorTexture, "door");
+		if (currentRoom?.doorTexture) {
+			console.log("Loading door texture:", currentRoom.doorTexture);
+			loadTexture(currentRoom.doorTexture, setDoorTexture, "door");
+		} else {
+			setDoorTexture(null);
+		}
 
 		// Load prop textures
 		if (currentRoom?.props && currentRoom.props.length > 0) {
-			console.log(`Loading ${currentRoom.props.length} prop textures`);
-
+			const newPropImages: Record<string, HTMLImageElement | null> = {};
 			currentRoom.props.forEach((prop) => {
 				if (prop.imageUrl) {
-					const img = new Image();
-					img.src = prop.imageUrl;
-					img.onload = () => {
-						console.log(
-							`Prop texture loaded for ${prop.id}, dimensions:`,
-							img.width,
-							"x",
-							img.height,
-						);
-						setPropImages((prev) => ({ ...prev, [prop.id]: img }));
-					};
-					img.onerror = (err) => {
-						console.error(`Failed to load prop texture for ${prop.id}:`, err);
-						setPropImages((prev) => ({ ...prev, [prop.id]: null }));
-					};
+					console.log(`Loading prop texture for ${prop.id}:`, prop.imageUrl);
+					const fullUrl = getImageUrl(prop.imageUrl);
+					if (fullUrl) {
+						const img = new Image();
+						img.src = fullUrl;
+						img.onload = () => {
+							console.log(`Prop texture loaded for ${prop.id}:`, fullUrl);
+							setPropImages((prev) => ({ ...prev, [prop.id]: img }));
+						};
+						img.onerror = (err) => {
+							console.error(
+								`Failed to load prop texture for ${prop.id}:`,
+								fullUrl,
+								err,
+							);
+							setPropImages((prev) => ({ ...prev, [prop.id]: null }));
+						};
+					} else {
+						newPropImages[prop.id] = null;
+					}
+				} else {
+					newPropImages[prop.id] = null;
 				}
 			});
+			// Clear props that are no longer in the room
+			setPropImages(newPropImages);
 		} else {
-			console.log("No props to load textures for");
+			setPropImages({});
 		}
 
-		// Log texture state changes
-		console.log("Floor texture:", floorTexture ? "Loaded" : "Not loaded");
-		console.log("Door texture:", doorTexture ? "Loaded" : "Not loaded");
-		console.log(
-			"Prop textures:",
-			Object.keys(propImages).length > 0
-				? `${Object.keys(propImages).length} loaded`
-				: "None loaded",
-		);
-	}, [floorTextureUrl, currentRoom?.doorTexture, currentRoom?.props]);
+		// Load riddle textures
+		if (currentRoom?.riddles && currentRoom.riddles.length > 0) {
+			const newRiddleImages: Record<string, HTMLImageElement | null> = {};
+			currentRoom.riddles.forEach((riddle) => {
+				if (riddle.texture) {
+					console.log(
+						`Loading riddle texture for ${riddle.id}:`,
+						riddle.texture,
+					);
+					const fullUrl = getImageUrl(riddle.texture);
+					if (fullUrl) {
+						const img = new Image();
+						img.src = fullUrl;
+						img.onload = () => {
+							console.log(`Riddle texture loaded for ${riddle.id}:`, fullUrl);
+							setRiddleImages((prev) => ({ ...prev, [riddle.id]: img }));
+						};
+						img.onerror = (err) => {
+							console.error(
+								`Failed to load riddle texture for ${riddle.id}:`,
+								fullUrl,
+								err,
+							);
+							setRiddleImages((prev) => ({ ...prev, [riddle.id]: null }));
+						};
+					} else {
+						newRiddleImages[riddle.id] = null;
+					}
+				} else {
+					newRiddleImages[riddle.id] = null;
+				}
+			});
+			// Clear riddles that are no longer in the room
+			setRiddleImages(newRiddleImages);
+		} else {
+			setRiddleImages({});
+		}
+	}, [
+		floorTextureUrl,
+		currentRoom?.doorTexture,
+		currentRoom?.props,
+		currentRoom?.riddles,
+	]);
 
 	const handleCellAction = (row: number, col: number) => {
 		const key = `${row}-${col}`;
-		// If a riddle is selected, update its position
 		if (selectedRiddle && selectedTool === "riddle") {
 			dispatch(
 				updateRiddlePosition({
@@ -161,7 +230,6 @@ const MainCanvasWrapper: React.FC = () => {
 				}
 				break;
 			case "door":
-				console.log("Adding door at position:", row, col);
 				dispatch(addDoor({ row, col })); // Save door position in grid coordinates
 				break;
 			case "startPoint":
@@ -207,7 +275,6 @@ const MainCanvasWrapper: React.FC = () => {
 			return null;
 		}
 
-		console.log("Rendering grid cells");
 		const cells = [];
 		for (let row = 0; row < ROOM_HEIGHT; row++) {
 			for (let col = 0; col < ROOM_WIDTH; col++) {
@@ -215,7 +282,7 @@ const MainCanvasWrapper: React.FC = () => {
 				const isActive = currentRoom.grid[key];
 
 				if (isActive) {
-					// Render texture layer (if texture exists)
+					// Only render texture if it exists, otherwise render a simple neutral floor
 					if (floorTexture) {
 						cells.push(
 							<Rect
@@ -235,54 +302,16 @@ const MainCanvasWrapper: React.FC = () => {
 								onMouseMove={handleMouseMove}
 							/>,
 						);
-					}
-
-					// Render painting color if floorAccepted is false
-					if (!floorAccepted && paintingColor) {
+					} else {
+						// Simple neutral floor without color - just a light background
 						cells.push(
 							<Rect
-								key={`${key}-painting-color`}
+								key={`${key}-floor`}
 								x={col * GRID_SIZE}
 								y={row * GRID_SIZE}
 								width={GRID_SIZE}
 								height={GRID_SIZE}
-								fill={paintingColor}
-								opacity={floorTexture ? 0.5 : 1} // Semi-transparent if texture exists
-								stroke='#555'
-								onMouseDown={handleMouseDown}
-								onMouseMove={handleMouseMove}
-							/>,
-						);
-					}
-
-					// Render floor color if floorAccepted is true
-					if (floorAccepted && floorColor) {
-						cells.push(
-							<Rect
-								key={`${key}-floor-color`}
-								x={col * GRID_SIZE}
-								y={row * GRID_SIZE}
-								width={GRID_SIZE}
-								height={GRID_SIZE}
-								fill={floorColor}
-								opacity={floorTexture ? 0.5 : 1} // Semi-transparent if texture exists
-								stroke='#555'
-								onMouseDown={handleMouseDown}
-								onMouseMove={handleMouseMove}
-							/>,
-						);
-					}
-
-					// Render transparent overlay if floorAccepted is true and no floorColor or texture exists
-					if (floorAccepted && !floorColor && !floorTexture) {
-						cells.push(
-							<Rect
-								key={`${key}-transparent`}
-								x={col * GRID_SIZE}
-								y={row * GRID_SIZE}
-								width={GRID_SIZE}
-								height={GRID_SIZE}
-								fill='transparent'
+								fill='#e8e8e8' // Light neutral gray
 								stroke='#555'
 								onMouseDown={handleMouseDown}
 								onMouseMove={handleMouseMove}
@@ -307,20 +336,14 @@ const MainCanvasWrapper: React.FC = () => {
 				}
 			}
 		}
-		console.log(`Rendered ${cells.length} grid cells`);
 		return cells;
 	};
 
 	const renderWalls = () => {
 		if (!currentRoom || !floorAccepted) {
-			console.log("Not rendering walls - conditions not met:", {
-				hasCurrentRoom: Boolean(currentRoom),
-				floorAccepted: floorAccepted,
-			});
 			return null;
 		}
 
-		console.log("Rendering walls");
 		const wallLines = [];
 		const gridKeys = Object.keys(currentRoom.grid);
 
@@ -401,59 +424,62 @@ const MainCanvasWrapper: React.FC = () => {
 			}
 		});
 
-		console.log(`Rendered ${wallLines.length} wall lines`);
 		return wallLines;
 	};
 
 	const renderDoors = () => {
-		console.log("Attempting to render doors");
-		console.log("Door rendering conditions:", {
-			hasDoor: Boolean(currentRoom?.door),
-			doorTextureLoaded: Boolean(doorTexture),
-		});
-
-		if (!currentRoom?.door || !doorTexture) {
-			console.log("Cannot render door - missing data");
+		if (!currentRoom?.door) {
 			return null;
 		}
 
-		console.log("Rendering door with data:", currentRoom.door);
-
-		// Render a single door instead of mapping through an array
 		const door = currentRoom.door;
 		const rotation = door.rotation || 0;
 
+		// If we have a door texture, render it
+		if (doorTexture) {
+			return (
+				<Rect
+					key='door'
+					x={door.col * GRID_SIZE}
+					y={door.row * GRID_SIZE}
+					width={GRID_SIZE}
+					height={GRID_SIZE}
+					fillPatternImage={doorTexture}
+					fillPatternScale={{
+						x: GRID_SIZE / doorTexture.width,
+						y: GRID_SIZE / doorTexture.height,
+					}}
+					fillPatternOffset={{ x: 0, y: 0 }}
+					fillPatternRotation={rotation}
+					stroke='#555'
+					strokeWidth={2}
+					shadowColor='black'
+					shadowBlur={10}
+					shadowOffset={{ x: 5, y: 5 }}
+					shadowOpacity={0.5}
+					shadowForStrokeEnabled={false}
+				/>
+			);
+		}
+
+		// Fallback: render a simple colored door
 		return (
 			<Rect
-				key='door'
+				key='door-fallback'
 				x={door.col * GRID_SIZE}
 				y={door.row * GRID_SIZE}
 				width={GRID_SIZE}
 				height={GRID_SIZE}
-				fillPatternImage={doorTexture}
-				fillPatternScale={{
-					x: GRID_SIZE / doorTexture.width,
-					y: GRID_SIZE / doorTexture.height,
-				}}
-				fillPatternOffset={{ x: 0, y: 0 }}
-				fillPatternRotation={rotation} // Apply rotation to the texture pattern only
-				stroke='#555'
+				fill='#8B4513' // Brown color for door
+				stroke='#654321'
 				strokeWidth={2}
-				shadowColor='black'
-				shadowBlur={10}
-				shadowOffset={{ x: 5, y: 5 }}
-				shadowOpacity={0.5}
-				shadowForStrokeEnabled={false}
+				rotation={rotation}
 			/>
 		);
 	};
 
 	const renderStartingPoint = () => {
-		console.log("Attempting to render starting point");
-		console.log("Starting point data:", currentRoom?.startingPoint);
-
 		if (!currentRoom?.startingPoint) {
-			console.log("No starting point defined");
 			return null;
 		}
 
@@ -496,6 +522,19 @@ const MainCanvasWrapper: React.FC = () => {
 				return null;
 			}
 
+			// Calculate transform values
+			const rotation = prop.rotation || 0;
+			const flipHorizontal = prop.flipHorizontal || false;
+			const flipVertical = prop.flipVertical || false;
+
+			// Calculate scale values for reflection
+			const scaleX = flipHorizontal ? -1 : 1;
+			const scaleY = flipVertical ? -1 : 1;
+
+			// Calculate offset for the center of the cell
+			const offsetX = prop.position.col * GRID_SIZE + GRID_SIZE / 2;
+			const offsetY = prop.position.row * GRID_SIZE + GRID_SIZE / 2;
+
 			return (
 				<Rect
 					key={prop.id}
@@ -505,10 +544,14 @@ const MainCanvasWrapper: React.FC = () => {
 					height={GRID_SIZE}
 					fillPatternImage={propImage}
 					fillPatternScale={{
-						x: GRID_SIZE / propImage.width,
-						y: GRID_SIZE / propImage.height,
+						x: (GRID_SIZE / propImage.width) * scaleX,
+						y: (GRID_SIZE / propImage.height) * scaleY,
 					}}
-					fillPatternRotation={prop.rotation || 0}
+					fillPatternRotation={rotation}
+					fillPatternOffset={{
+						x: flipHorizontal ? propImage.width : 0,
+						y: flipVertical ? propImage.height : 0,
+					}}
 					stroke={
 						isSelected ? "#FF9900" : prop.hasCollider ? "green" : "transparent"
 					}
@@ -525,13 +568,33 @@ const MainCanvasWrapper: React.FC = () => {
 
 		return currentRoom.riddles.map((riddle) => {
 			if (!riddle.position) return null;
-
 			const { row, col } = riddle.position;
 			const isSelected = riddle.id === selectedRiddle;
+			const riddleImage = riddleImages[riddle.id];
 
+			if (riddleImage) {
+				return (
+					<Rect
+						key={riddle.id}
+						x={col * GRID_SIZE}
+						y={row * GRID_SIZE}
+						width={GRID_SIZE}
+						height={GRID_SIZE}
+						fillPatternImage={riddleImage}
+						fillPatternScale={{
+							x: GRID_SIZE / riddleImage.width,
+							y: GRID_SIZE / riddleImage.height,
+						}}
+						stroke={isSelected ? "#FF9900" : "#3BCEAC"}
+						strokeWidth={isSelected ? 3 : 2}
+						cornerRadius={GRID_SIZE / 6}
+					/>
+				);
+			}
+
+			// Fallback: colored marker
 			return (
 				<React.Fragment key={riddle.id}>
-					{/* Transparent background */}
 					<Rect
 						x={col * GRID_SIZE}
 						y={row * GRID_SIZE}
@@ -539,7 +602,6 @@ const MainCanvasWrapper: React.FC = () => {
 						height={GRID_SIZE}
 						fill='transparent'
 					/>
-					{/* Riddle marker */}
 					<Rect
 						x={col * GRID_SIZE + GRID_SIZE / 4}
 						y={row * GRID_SIZE + GRID_SIZE / 4}
