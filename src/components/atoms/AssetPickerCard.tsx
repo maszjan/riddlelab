@@ -1,7 +1,18 @@
-import React from "react";
 import useGetAsset from "../../hooks/useGetAsset";
 
-const AssetPickerCard = ({ asset, onSelect }) => {
+// Define the asset interface
+interface Asset {
+	id: number;
+	name: string;
+}
+
+// Define the component props interface
+interface AssetPickerCardProps {
+	asset: Asset;
+	onSelect: (assetId: number) => void;
+}
+
+const AssetPickerCard = ({ asset, onSelect }: AssetPickerCardProps) => {
 	const { asset: assetDetails, loading } = useGetAsset(asset.id);
 
 	return (

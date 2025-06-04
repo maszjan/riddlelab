@@ -1,12 +1,18 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useAuthorizedApiClient } from "../../../utils/apiHelpers";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { createPortal } from "react-dom";
+import axios from "axios";
 
 interface CreateAssetModalProps {
 	isOpen: boolean;
 	onClose: (assetAdded?: boolean) => void;
+}
+
+// Define the expected error response structure
+interface ApiErrorResponse {
+	message: string;
 }
 
 const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
@@ -14,6 +20,7 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 	onClose,
 }) => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [imagePreview, setImagePreview] = useState<string | null>(null);
 	const authorizedClient = useAuthorizedApiClient();
 
 	const formik = useFormik({
@@ -35,6 +42,9 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 				otherwise: () => Yup.boolean().strip(),
 			}),
 		}),
+		validateOnMount: false, // Don't validate on mount
+		validateOnChange: false, // Only validate on blur and submit
+		validateOnBlur: true,
 		onSubmit: async (values, { resetForm, setErrors }) => {
 			try {
 				setIsSubmitting(true);
@@ -57,11 +67,19 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 				});
 
 				resetForm();
+				setImagePreview(null);
 				onClose(true);
 			} catch (error) {
-				if (error.response && error.response.data) {
-					setErrors({ name: error.response.data.message });
+				// Use axios type guard to properly handle errors
+				if (axios.isAxiosError<ApiErrorResponse>(error)) {
+					// Now we can safely access error.response
+					if (error.response?.data?.message) {
+						setErrors({ name: error.response.data.message });
+					} else {
+						setErrors({ name: "Wystąpił błąd podczas dodawania zasobu" });
+					}
 				} else {
+					// Handle non-axios errors
 					setErrors({ name: "Wystąpił błąd podczas dodawania zasobu" });
 				}
 			} finally {
@@ -70,16 +88,36 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 		},
 	});
 
+	const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.currentTarget.files?.[0];
+		if (file) {
+			formik.setFieldValue("image", file);
+
+			// Create preview
+			const reader = new FileReader();
+			reader.onloadend = () => {
+				setImagePreview(reader.result as string);
+			};
+			reader.readAsDataURL(file);
+		}
+	};
+
+	const handleClose = () => {
+		formik.resetForm();
+		setImagePreview(null);
+		onClose(false);
+	};
+
 	if (!isOpen) return null;
 
 	return createPortal(
 		<div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-			<div className='bg-gray-800 rounded-lg p-6 w-full max-w-md'>
+			<div className='bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto'>
 				<div className='flex justify-between items-center mb-4'>
 					<h2 className='text-xl font-bold text-mainMint'>Dodaj nowy zasób</h2>
 					<button
-						onClick={() => onClose(false)} // Przekazujemy false, gdy zamykamy bez dodawania
-						className='text-gray-400 hover:text-white'>
+						onClick={handleClose}
+						className='text-gray-400 hover:text-white text-2xl'>
 						&times;
 					</button>
 				</div>
@@ -98,7 +136,7 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 							onChange={formik.handleChange}
 							onBlur={formik.handleBlur}
 							value={formik.values.name}
-							className='w-full p-2 rounded-md bg-gray-700 text-white border-gray-600'
+							className='w-full p-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:border-mainMint focus:outline-none'
 						/>
 						{formik.touched.name && formik.errors.name ? (
 							<div className='text-red-500 text-sm mt-1'>
@@ -119,7 +157,7 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 							onChange={formik.handleChange}
 							onBlur={formik.handleBlur}
 							value={formik.values.type}
-							className='w-full p-2 rounded-md bg-gray-700 text-white border-gray-600'>
+							className='w-full p-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:border-mainMint focus:outline-none'>
 							<option value='door'>Drzwi</option>
 							<option value='floor'>Podłoga</option>
 							<option value='prop'>Rekwizyt</option>
@@ -128,45 +166,91 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 					</div>
 
 					<div className='mb-4'>
-						<label
-							htmlFor='image'
-							className='block text-sm font-medium text-mainMint mb-1'>
+						<label className='block text-sm font-medium text-mainMint mb-2'>
 							Obraz (64x64px)
 						</label>
-						<input
-							id='image'
-							name='image'
-							type='file'
-							accept='image/png,image/jpeg,image/jpg'
-							onChange={(event) => {
-								if (event.currentTarget.files && event.currentTarget.files[0]) {
-									formik.setFieldValue("image", event.currentTarget.files[0]);
-								}
-							}}
-							className='w-full p-2 rounded-md bg-gray-700 text-white border-gray-600'
-						/>
+
+						{/* Image Upload Area */}
+						<div className='relative'>
+							<input
+								id='image'
+								name='image'
+								type='file'
+								accept='image/png,image/jpeg,image/jpg'
+								onChange={handleImageChange}
+								className='absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10'
+							/>
+
+							<div
+								className={`
+                                border-2 border-dashed rounded-lg p-6 text-center transition-colors
+                                ${
+																	imagePreview
+																		? "border-mainMint bg-gray-700"
+																		: "border-gray-600 bg-gray-700 hover:border-mainMint hover:bg-gray-600"
+																}
+                            `}>
+								{imagePreview ? (
+									<div className='flex flex-col items-center space-y-3'>
+										<div className='w-24 h-24 rounded-lg overflow-hidden bg-gray-600'>
+											<img
+												src={imagePreview}
+												alt='Preview'
+												className='w-full h-full object-cover'
+											/>
+										</div>
+										<div className='text-sm text-gray-300'>
+											<p className='font-medium'>{formik.values.image?.name}</p>
+											<p className='text-gray-400'>Kliknij aby zmienić</p>
+										</div>
+									</div>
+								) : (
+									<div className='flex flex-col items-center space-y-3'>
+										{/* Image Icon */}
+										<div className='w-16 h-16 rounded-lg bg-gray-600 flex items-center justify-center'>
+											<svg
+												className='w-8 h-8 text-gray-400'
+												fill='none'
+												stroke='currentColor'
+												viewBox='0 0 24 24'>
+												<path
+													strokeLinecap='round'
+													strokeLinejoin='round'
+													strokeWidth={2}
+													d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'
+												/>
+											</svg>
+										</div>
+										<div className='text-sm text-gray-300'>
+											<p className='font-medium mb-1'>
+												Kliknij aby dodać obraz
+											</p>
+											<p className='text-gray-400'>PNG, JPG, JPEG (64x64px)</p>
+										</div>
+									</div>
+								)}
+							</div>
+						</div>
+
 						{formik.touched.image && formik.errors.image ? (
 							<div className='text-red-500 text-sm mt-1'>
 								{formik.errors.image}
 							</div>
 						) : null}
-						<p className='text-gray-400 text-xs mt-1'>
-							Obraz musi mieć wymiary 64x64 pikseli
-						</p>
 					</div>
 
 					{formik.values.type === "prop" && (
-						<div className='mb-4 flex items-center'>
+						<div className='mb-6 flex items-center p-3 bg-gray-700 rounded-md'>
 							<input
 								id='has_collider'
 								name='has_collider'
 								type='checkbox'
 								onChange={formik.handleChange}
 								checked={formik.values.has_collider}
-								className='mr-2'
+								className='mr-3 w-4 h-4 text-mainMint bg-gray-600 border-gray-500 rounded focus:ring-mainMint focus:ring-2'
 							/>
 							<label htmlFor='has_collider' className='text-sm text-gray-300'>
-								Posiada kolizję
+								Posiada kolizję (blokuje ruch gracza)
 							</label>
 						</div>
 					)}
@@ -174,14 +258,14 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 					<div className='flex justify-end space-x-3'>
 						<button
 							type='button'
-							onClick={() => onClose(false)}
-							className='px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700'>
+							onClick={handleClose}
+							className='px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 transition-colors'>
 							Anuluj
 						</button>
 						<button
 							type='submit'
 							disabled={isSubmitting}
-							className='px-4 py-2 bg-mainMint text-gray-800 rounded-md hover:bg-gray-700 hover:text-mainMint transition-colors duration-200'>
+							className='px-4 py-2 bg-mainMint text-gray-800 rounded-md hover:bg-opacity-90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'>
 							{isSubmitting ? "Zapisywanie..." : "Zapisz"}
 						</button>
 					</div>

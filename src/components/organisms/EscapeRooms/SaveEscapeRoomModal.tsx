@@ -57,7 +57,8 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 	});
 
 	// Helper function to convert URL to relative path
-	const convertUrlToPath = (url: string | null): string | null => {
+	const convertUrlToPath = (url: string | null | undefined): string | null => {
+		// Fixed: added undefined type
 		if (!url) return null;
 
 		// If it's already a relative path, return as is
@@ -134,11 +135,11 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 						},
 						type: riddle.type || "knowledge",
 						data: {
-							title: riddle.data?.title || "",
-							question: riddle.data?.question || "",
-							answer: riddle.data?.answer || "",
-							hints: riddle.data?.hints || [],
-							options: riddle.data?.options || {},
+							title: riddle.title || "", // Fixed: changed from riddle.data?.title
+							question: riddle.question || "", // Fixed: changed from riddle.data?.question
+							answer: riddle.answer || "", // Fixed: changed from riddle.data?.answer
+							hints: riddle.hints || [], // Fixed: changed from riddle.data?.hints
+							options: riddle.options || {}, // Fixed: changed from riddle.data?.options
 						},
 						assetId: riddle.assetId || null,
 						texture: riddle.texture || null,
@@ -257,8 +258,8 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 							riddle.data.answer,
 						);
 
-						// Hints
-						riddle.data.hints.forEach((hint, hintIndex) => {
+						// Hints - Fixed: added proper types
+						riddle.data.hints.forEach((hint: string, hintIndex: number) => {
 							formData.append(
 								`rooms[${index}][riddles][${riddleIndex}][data][hints][${hintIndex}]`,
 								hint,
@@ -741,7 +742,8 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 						Anuluj
 					</button>
 					<button
-						onClick={formik.handleSubmit}
+						type='button' // Fixed: added type='button'
+						onClick={() => formik.handleSubmit()} // Fixed: wrapped in arrow function
 						disabled={formik.isSubmitting || !formik.isValid || !hasValidData}
 						className={`px-8 py-3 rounded-lg font-semibold transition-colors ${
 							formik.isSubmitting || !formik.isValid || !hasValidData

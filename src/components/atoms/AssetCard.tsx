@@ -1,15 +1,27 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import useGetAsset from "../../hooks/useGetAsset";
 import { FaTrash } from "react-icons/fa";
 import { useAuthorizedApiClient } from "../../utils/apiHelpers";
 import ConfirmationModal from "../molecules/ConfirmationModal";
 
-const AssetCard = ({ asset, onDelete }) => {
+// Define types for the component props
+interface Asset {
+	id: number;
+	name: string;
+	is_public: boolean;
+}
+
+interface AssetCardProps {
+	asset: Asset;
+	onDelete?: (assetId: number) => void;
+}
+
+const AssetCard = ({ asset, onDelete }: AssetCardProps) => {
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const { asset: assetDetails, loading } = useGetAsset(asset.id);
 	const authorizedClient = useAuthorizedApiClient();
 
-	const handleDeleteClick = (e) => {
+	const handleDeleteClick = (e: React.MouseEvent<HTMLButtonElement>) => {
 		e.stopPropagation();
 		setShowDeleteModal(true);
 	};

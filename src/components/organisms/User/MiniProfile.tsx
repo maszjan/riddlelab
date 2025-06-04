@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import useLogout from "../../../hooks/useLogout";
-import { User } from "../../interfaces";
+import { User } from "../../../interfaces";
 import AvatarPreview from "../../molecules/AvatarPreview";
 
 interface MiniProfileProps {
@@ -63,14 +63,14 @@ const MiniProfile: React.FC<MiniProfileProps> = ({ user }) => {
 		}
 	};
 
-	const getMenuPosition = () => {
+	const getMenuPosition = (): CSSProperties => {
 		if (!buttonRef.current) return {};
 
 		const rect = buttonRef.current.getBoundingClientRect();
 		return {
-			position: "fixed",
-			top: `${rect.bottom + window.scrollY}px`,
-			left: `${rect.right - 100}px`,
+			position: "fixed" as const,
+			top: rect.bottom + window.scrollY,
+			left: rect.right - 100,
 		};
 	};
 

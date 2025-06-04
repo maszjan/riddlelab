@@ -1,13 +1,18 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import Cookies from "js-cookie";
-import { UserState, SetUserPayload, SetTokenPayload } from "./interfaces";
+import {
+	UserState,
+	SetUserPayload,
+	SetTokenPayload,
+	User,
+} from "../../interfaces";
 
 const saveToCookies = (
 	key: string,
 	value: string,
 	expirationMinutes: number,
 ) => {
-	Cookies.set(key, value, { expires: expirationMinutes / 1440 }); 
+	Cookies.set(key, value, { expires: expirationMinutes / 1440 });
 };
 
 const removeFromCookies = (key: string) => {
@@ -18,9 +23,19 @@ const getFromCookies = (key: string): string | null => {
 	return Cookies.get(key) || null;
 };
 
+// Fix the JSON.parse null issue
+const getUserFromCookie = (): User | null => {
+	const userStr = getFromCookies("user");
+	return userStr ? JSON.parse(userStr) : null;
+};
+
 const initialState: UserState = {
-	user: getFromCookies("user") ? JSON.parse(getFromCookies("user")) : null,
+	user: getUserFromCookie(),
 	token: getFromCookies("token"),
+	// Add the missing required properties
+	isAuthenticated: false,
+	loading: false,
+	error: null,
 };
 
 const userSlice = createSlice({
@@ -28,8 +43,8 @@ const userSlice = createSlice({
 	initialState,
 	reducers: {
 		setUser: (state, action: PayloadAction<SetUserPayload>) => {
-			state.user = action.payload;
-			saveToCookies("user", JSON.stringify(action.payload), 30); // Save for 30 minutes
+			state.user = action.payload as User; // Type assertion to fix the error
+			saveToCookies("user", JSON.stringify(action.payload), 30);
 		},
 		clearUser: (state) => {
 			state.user = null;
@@ -41,7 +56,7 @@ const userSlice = createSlice({
 				"token",
 				action.payload.accessToken,
 				action.payload.expiresIn / 60,
-			); // Convert seconds to minutes
+			);
 		},
 		clearToken: (state) => {
 			state.token = null;

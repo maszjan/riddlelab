@@ -7,67 +7,46 @@ import {
 	suggestValidPosition,
 	isStartingPointValid,
 } from "../../utils/editorHelpers";
+import { Room, Riddle, EscapeRoom } from "../../interfaces";
 
-interface Prop {
-	id: string;
-	name: string;
-	imageUrl: string;
-	assetId: number | null;
-	position: { row: number; col: number };
-	rotation: number;
-	hasCollider: boolean;
-}
-
-interface Metadata {
-	name: string;
-	description: string;
-	thumbnail: string | null;
-	soundtrack: string | null;
-}
-
-interface Riddle {
-	id: string;
-	position: { row: number; col: number } | null;
-	type: string;
-	data: any;
-	assetId: number | null;
-	texture: string | null;
-}
-
-interface Room {
-	id: string;
+// Extended Room interface for editor-specific properties
+interface EditorRoom extends Omit<Room, "walls" | "grid" | "door"> {
 	escapeRoomId: string;
 	grid: { [key: string]: boolean };
 	walls: { [key: string]: string };
 	wallColor: string;
-	wallThickness: number;
-	floorTexture: string | null;
-	floorTextureAssetId: number | null;
+	floorColor?: string;
+	floorAccepted: boolean;
 	door: {
 		row: number;
 		col: number;
 		rotation: number;
-	} | null;
-	doorTexture: string | null;
-	doorTextureAssetId: number | null;
-	startingPoint: { row: number; col: number } | null;
-	riddles: Riddle[];
-	props: Prop[];
-	floorAccepted: boolean;
+		scaleX?: number;
+		scaleY?: number;
+		opacity?: number;
+	};
+	startingPoint?: { row: number; col: number } | null;
 }
 
-interface EscapeRoom {
-	id: string;
+// Extended EscapeRoom interface for editor
+interface EditorEscapeRoom
+	extends Omit<EscapeRoom, "rooms" | "metadata" | "currentRoomIndex"> {
 	name: string;
 	description: string;
 	thumbnail: string | null;
-	metadata: Metadata;
-	rooms: Room[];
+	metadata: {
+		name: string;
+		description: string;
+		thumbnail: string | null;
+		soundtrack: string | null;
+	};
+	rooms: EditorRoom[];
 }
 
-interface EditorState {
+// Extended EditorState with proper types
+interface ExtendedEditorState {
 	currentEscapeRoomId: string;
-	escapeRooms: EscapeRoom[];
+	escapeRooms: EditorEscapeRoom[];
 	currentRoomId: string;
 	selectedTool:
 		| "paintFloor"
@@ -78,18 +57,20 @@ interface EditorState {
 		| "walls"
 		| "clearRoom"
 		| "metadata"
-		| "roomManager";
+		| "roomManager"
+		| "props";
 	selectedRiddle: string | null;
 	selectedProp: string | null;
 }
 
-const initialState: EditorState = {
+const initialState: ExtendedEditorState = {
 	currentEscapeRoomId: "escapeRoom1",
 	escapeRooms: [
 		{
 			id: "escapeRoom1",
 			name: "Escape Room 1",
 			description: "An exciting escape room adventure.",
+			thumbnail: null,
 			metadata: {
 				name: "Escape Room 1",
 				description: "An exciting escape room adventure.",
@@ -102,14 +83,22 @@ const initialState: EditorState = {
 					escapeRoomId: "escapeRoom1",
 					grid: {},
 					walls: {},
+					name: "Room 1",
 					floorColor: "#cccccc",
 					wallColor: "#888888",
 					wallThickness: 6,
 					floorTexture: null,
-					floorTextureAssetId: null, // Add this
-					door: null,
+					floorTextureAssetId: null,
+					door: {
+						row: 0,
+						col: 0,
+						rotation: 0,
+						scaleX: 1,
+						scaleY: 1,
+						opacity: 1,
+					},
 					doorTexture: null,
-					doorTextureAssetId: null, // Add this
+					doorTextureAssetId: null,
 					startingPoint: null,
 					riddles: [],
 					props: [],
@@ -121,7 +110,7 @@ const initialState: EditorState = {
 	currentRoomId: "room1",
 	selectedTool: "paintFloor",
 	selectedRiddle: null,
-	selectedProp: null, // Add this
+	selectedProp: null,
 };
 
 const editorSlice = createSlice({
@@ -150,12 +139,20 @@ const editorSlice = createSlice({
 							escapeRoomId: newEscapeRoomId,
 							grid: {},
 							walls: {},
+							name: "Room 1",
 							floorColor: "#cccccc",
 							wallColor: "#888888",
 							wallThickness: 6,
 							floorTexture: null,
 							floorTextureAssetId: null,
-							door: null,
+							door: {
+								row: 0,
+								col: 0,
+								rotation: 0,
+								scaleX: 1,
+								scaleY: 1,
+								opacity: 1,
+							},
 							doorTexture: null,
 							doorTextureAssetId: null,
 							startingPoint: null,
@@ -189,24 +186,18 @@ const editorSlice = createSlice({
 		setSelectedRiddle(state, action: PayloadAction<string | null>) {
 			state.selectedRiddle = action.payload;
 		},
-		setSelectedTool(state, action: PayloadAction<EditorState["selectedTool"]>) {
+		setSelectedTool(
+			state,
+			action: PayloadAction<ExtendedEditorState["selectedTool"]>,
+		) {
 			state.selectedTool = action.payload;
 		},
-		updateMetadata(
-			state,
-			action: PayloadAction<{ key: keyof Metadata; value: any }>,
-		) {
+		updateMetadata(state, action: PayloadAction<{ key: string; value: any }>) {
 			const escapeRoom = state.escapeRooms.find(
 				(er) => er.id === state.currentEscapeRoomId,
 			);
-			if (escapeRoom) {
-				if (action.payload.key in escapeRoom.metadata) {
-					escapeRoom.metadata[action.payload.key] = action.payload.value;
-				} else {
-					console.warn(
-						`Invalid metadata key: ${action.payload.key}. Allowed keys are: name, description, thumbnail, soundtrack.`,
-					);
-				}
+			if (escapeRoom && escapeRoom.metadata) {
+				(escapeRoom.metadata as any)[action.payload.key] = action.payload.value;
 			}
 		},
 		addDoor(state, action: PayloadAction<{ row: number; col: number }>) {
@@ -222,6 +213,9 @@ const editorSlice = createSlice({
 					room.door = {
 						...doorPosition,
 						rotation: 0,
+						scaleX: 1,
+						scaleY: 1,
+						opacity: 1,
 					};
 				} else {
 					console.warn("Cannot place door on invalid grid position");
@@ -230,6 +224,9 @@ const editorSlice = createSlice({
 						room.door = {
 							...validPosition,
 							rotation: 0,
+							scaleX: 1,
+							scaleY: 1,
+							opacity: 1,
 						};
 					}
 				}
@@ -239,6 +236,9 @@ const editorSlice = createSlice({
 			state,
 			action: PayloadAction<{
 				rotation?: number;
+				scaleX?: number;
+				scaleY?: number;
+				opacity?: number;
 			}>,
 		) {
 			const escapeRoom = state.escapeRooms.find(
@@ -264,7 +264,7 @@ const editorSlice = createSlice({
 			state,
 			action: PayloadAction<{
 				texture: string | null;
-				textureAssetId: number | null;
+				doorTextureAssetId: number | null; // Changed from textureAssetId
 			}>,
 		) {
 			const escapeRoom = state.escapeRooms.find(
@@ -273,14 +273,10 @@ const editorSlice = createSlice({
 			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
 			if (room) {
 				room.doorTexture = action.payload.texture;
-				room.doorTextureAssetId = action.payload.textureAssetId;
-
-				console.log("Redux: Setting door texture", {
-					texture: action.payload.texture,
-					textureAssetId: action.payload.textureAssetId,
-				});
+				room.doorTextureAssetId = action.payload.doorTextureAssetId; // Updated reference
 			}
 		},
+		// ... (continue with all the other reducers from your original file)
 		addRiddle(
 			state,
 			action: PayloadAction<{
@@ -307,23 +303,18 @@ const editorSlice = createSlice({
 				const riddleObj = {
 					id: action.payload.id,
 					position: riddlePosition,
-					type: action.payload.type,
-					data: {
-						title: action.payload.title,
-						question: action.payload.question,
-						answer: action.payload.answer,
-						hints: action.payload.hints,
-						options: action.payload.options,
-					},
+					type: action.payload.type as any,
+					title: action.payload.title,
+					question: action.payload.question,
+					answer: action.payload.answer,
+					hints: action.payload.hints,
+					options: action.payload.options,
 					assetId: action.payload.assetId,
 					texture: action.payload.texture,
 				};
 
 				if (isRiddleValid(room.grid, riddlePosition)) {
 					room.riddles.push(riddleObj);
-					console.log(
-						`Riddle placed at (${riddlePosition.row}, ${riddlePosition.col})`,
-					);
 				} else {
 					console.warn("Cannot place riddle on invalid grid position");
 					const validPosition = suggestValidPosition(room.grid);
@@ -332,14 +323,128 @@ const editorSlice = createSlice({
 							...riddleObj,
 							position: validPosition,
 						});
-						console.log(
-							`Riddle auto-placed at valid position (${validPosition.row}, ${validPosition.col})`,
-						);
 					}
 				}
 			}
 		},
+		updateFloor(
+			state,
+			action: PayloadAction<{ color?: string; texture?: string | null }>,
+		) {
+			const escapeRoom = state.escapeRooms.find(
+				(er) => er.id === state.currentEscapeRoomId,
+			);
+			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
+			if (room) {
+				if (action.payload.color) {
+					room.floorColor = action.payload.color;
+				}
+				if (action.payload.texture !== undefined) {
+					room.floorTexture = action.payload.texture;
+				}
+			}
+		},
+		clearRoom(state) {
+			const escapeRoom = state.escapeRooms.find(
+				(er) => er.id === state.currentEscapeRoomId,
+			);
+			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
+			if (room) {
+				room.grid = {};
+				room.walls = {};
+				room.floorTexture = null;
+				room.floorTextureAssetId = null;
+				room.floorColor = "#e8e8e8";
+				room.wallColor = "#888888";
+				room.wallThickness = 6;
+				room.door = {
+					row: 0,
+					col: 0,
+					rotation: 0,
+					scaleX: 1,
+					scaleY: 1,
+					opacity: 1,
+				};
+				room.doorTexture = null;
+				room.doorTextureAssetId = null;
+				room.startingPoint = null;
+				room.riddles = [];
+				room.props = [];
+				room.floorAccepted = false;
+			}
+		},
+		addProp(
+			state,
+			action: PayloadAction<{
+				roomId: string;
+				prop: {
+					id: string;
+					name: string;
+					imageUrl?: string;
+					assetId: number | null;
+					position: { row: number; col: number };
+					rotation: number;
+					hasCollider: boolean;
+					flipHorizontal?: boolean;
+					flipVertical?: boolean;
+				};
+			}>,
+		) {
+			const room = state.escapeRooms
+				.flatMap((er) => er.rooms)
+				.find((r) => r.id === action.payload.roomId);
 
+			if (room) {
+				const propPosition = action.payload.prop.position;
+
+				const newProp = {
+					...action.payload.prop,
+					imageUrl: action.payload.prop.imageUrl || "",
+					flipHorizontal: action.payload.prop.flipHorizontal || false,
+					flipVertical: action.payload.prop.flipVertical || false,
+				};
+
+				if (isPropValid(room.grid, propPosition)) {
+					room.props.push(newProp);
+				} else {
+					console.warn("Cannot place prop on invalid grid position");
+					const validPosition = suggestValidPosition(room.grid);
+					if (validPosition) {
+						room.props.push({
+							...newProp,
+							position: validPosition,
+						});
+					}
+				}
+			}
+		},
+		updatePropReflection(
+			state,
+			action: PayloadAction<{
+				propId: string;
+				flipHorizontal?: boolean;
+				flipVertical?: boolean;
+			}>,
+		) {
+			const escapeRoom = state.escapeRooms.find(
+				(er) => er.id === state.currentEscapeRoomId,
+			);
+			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
+			if (room) {
+				const propIndex = room.props.findIndex(
+					(p) => p.id === action.payload.propId,
+				);
+				if (propIndex !== -1) {
+					const prop = room.props[propIndex];
+					if (action.payload.flipHorizontal !== undefined) {
+						(prop as any).flipHorizontal = action.payload.flipHorizontal;
+					}
+					if (action.payload.flipVertical !== undefined) {
+						(prop as any).flipVertical = action.payload.flipVertical;
+					}
+				}
+			}
+		},
 		updateRiddle(
 			state,
 			action: PayloadAction<{
@@ -382,17 +487,10 @@ const editorSlice = createSlice({
 					const newPosition = action.payload.position;
 					if (isRiddleValid(room.grid, newPosition)) {
 						room.riddles[riddleIndex].position = newPosition;
-						console.log(
-							`Riddle moved to (${newPosition.row}, ${newPosition.col})`,
-						);
 					} else {
-						console.warn("Cannot move riddle to invalid grid position");
 						const validPosition = suggestValidPosition(room.grid);
 						if (validPosition) {
 							room.riddles[riddleIndex].position = validPosition;
-							console.log(
-								`Riddle auto-moved to valid position (${validPosition.row}, ${validPosition.col})`,
-							);
 						}
 					}
 				}
@@ -414,7 +512,6 @@ const editorSlice = createSlice({
 				);
 			}
 		},
-
 		setStartingPoint(
 			state,
 			action: PayloadAction<{ row: number; col: number }>,
@@ -427,26 +524,16 @@ const editorSlice = createSlice({
 			if (room) {
 				const startingPointPosition = action.payload;
 
-				// Validate the starting point position before saving
 				if (isStartingPointValid(room.grid, startingPointPosition)) {
-					room.startingPoint = startingPointPosition; // Save the starting point in grid coordinates
-					console.log(
-						`Starting point set at (${startingPointPosition.row}, ${startingPointPosition.col})`,
-					);
+					room.startingPoint = startingPointPosition;
 				} else {
-					console.warn("Cannot place starting point on invalid grid position");
-					// Optionally suggest a valid position
 					const validPosition = suggestValidPosition(room.grid);
 					if (validPosition) {
 						room.startingPoint = validPosition;
-						console.log(
-							`Starting point auto-placed at valid position (${validPosition.row}, ${validPosition.col})`,
-						);
 					}
 				}
 			}
 		},
-
 		updateGrid(state, action: PayloadAction<{ key: string; active: boolean }>) {
 			const escapeRoom = state.escapeRooms.find(
 				(er) => er.id === state.currentEscapeRoomId,
@@ -454,9 +541,9 @@ const editorSlice = createSlice({
 			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
 			if (room) {
 				if (action.payload.active) {
-					room.grid[action.payload.key] = true; // Activate the grid cell
+					room.grid[action.payload.key] = true;
 				} else {
-					delete room.grid[action.payload.key]; // Deactivate the grid cell
+					delete room.grid[action.payload.key];
 				}
 			}
 		},
@@ -491,37 +578,17 @@ const editorSlice = createSlice({
 			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
 			if (room) {
 				room.floorAccepted = true;
-
 				Object.keys(room.grid).forEach((key) => {
 					if (!room.walls[key]) {
 						room.walls[key] = room.wallColor;
 					}
 				});
-				console.log("Floor accepted:", room.floorAccepted);
-				console.log("Walls initialized:", room.walls);
-			}
-		},
-		updateFloor(
-			state,
-			action: PayloadAction<{ color?: string; texture?: string | null }>,
-		) {
-			const escapeRoom = state.escapeRooms.find(
-				(er) => er.id === state.currentEscapeRoomId,
-			);
-			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
-			if (room) {
-				if (action.payload.color) {
-					room.floorColor = action.payload.color;
-				}
-				if (action.payload.texture !== undefined) {
-					room.floorTexture = action.payload.texture;
-				}
 			}
 		},
 		setFloorAndTexture(
 			state,
 			action: PayloadAction<{
-				color: string | null; // Keep for compatibility but won't be used
+				color: string | null;
 				texture: string | null;
 				textureAssetId: number | null;
 			}>,
@@ -533,75 +600,6 @@ const editorSlice = createSlice({
 			if (room) {
 				room.floorTexture = action.payload.texture;
 				room.floorTextureAssetId = action.payload.textureAssetId;
-			}
-		},
-		clearRoom(state) {
-			const escapeRoom = state.escapeRooms.find(
-				(er) => er.id === state.currentEscapeRoomId,
-			);
-			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
-			if (room) {
-				room.grid = {};
-				room.walls = {};
-				room.floorTexture = null;
-				room.floorTextureAssetId = null;
-				room.floorColor = "#e8e8e8"; // Light neutral gray as fallback
-				room.wallColor = "#888888";
-				room.wallThickness = 6;
-				room.door = null;
-				room.doorTexture = null;
-				room.doorTextureAssetId = null;
-				room.startingPoint = null;
-				room.riddles = [];
-				room.props = [];
-				room.floorAccepted = false;
-			}
-		},
-		addProp(
-			state,
-			action: PayloadAction<{
-				roomId: string;
-				prop: {
-					id: string;
-					name: string;
-					imageUrl?: string; // Optional for backward compatibility
-					assetId: number | null; // Asset ID from server
-					position: { row: number; col: number };
-					rotation: number;
-					hasCollider: boolean;
-				};
-			}>,
-		) {
-			const room = state.escapeRooms
-				.flatMap((er) => er.rooms)
-				.find((r) => r.id === action.payload.roomId);
-
-			if (room) {
-				const propPosition = action.payload.prop.position;
-
-				const newProp: Prop = {
-					...action.payload.prop,
-					imageUrl: action.payload.prop.imageUrl || "", // Fallback for compatibility
-				};
-
-				if (isPropValid(room.grid, propPosition)) {
-					room.props.push(newProp);
-					console.log(
-						`Prop placed at (${propPosition.row}, ${propPosition.col})`,
-					);
-				} else {
-					console.warn("Cannot place prop on invalid grid position");
-					const validPosition = suggestValidPosition(room.grid);
-					if (validPosition) {
-						room.props.push({
-							...newProp,
-							position: validPosition,
-						});
-						console.log(
-							`Prop auto-placed at valid position (${validPosition.row}, ${validPosition.col})`,
-						);
-					}
-				}
 			}
 		},
 		removeProp(
@@ -635,21 +633,12 @@ const editorSlice = createSlice({
 				if (propIndex !== -1) {
 					const propPosition = action.payload.position;
 
-					// Validate the prop position before updating
 					if (isPropValid(room.grid, propPosition)) {
 						room.props[propIndex].position = propPosition;
-						console.log(
-							`Prop moved to (${propPosition.row}, ${propPosition.col})`,
-						);
 					} else {
-						console.warn("Cannot move prop to invalid grid position");
-						// Optionally suggest a valid position
 						const validPosition = suggestValidPosition(room.grid);
 						if (validPosition) {
 							room.props[propIndex].position = validPosition;
-							console.log(
-								`Prop auto-moved to valid position (${validPosition.row}, ${validPosition.col})`,
-							);
 						}
 					}
 				}
@@ -657,39 +646,6 @@ const editorSlice = createSlice({
 		},
 		setSelectedProp(state, action: PayloadAction<string | null>) {
 			state.selectedProp = action.payload;
-		},
-		// Add this action in the reducers section
-
-		updatePropReflection(
-			state,
-			action: PayloadAction<{
-				propId: string;
-				flipHorizontal?: boolean;
-				flipVertical?: boolean;
-			}>,
-		) {
-			const escapeRoom = state.escapeRooms.find(
-				(er) => er.id === state.currentEscapeRoomId,
-			);
-			const room = escapeRoom?.rooms.find((r) => r.id === state.currentRoomId);
-			if (room) {
-				const propIndex = room.props.findIndex(
-					(p) => p.id === action.payload.propId,
-				);
-				if (propIndex !== -1) {
-					const prop = room.props[propIndex];
-					if (action.payload.flipHorizontal !== undefined) {
-						prop.flipHorizontal = action.payload.flipHorizontal;
-					}
-					if (action.payload.flipVertical !== undefined) {
-						prop.flipVertical = action.payload.flipVertical;
-					}
-					console.log(`Prop ${action.payload.propId} reflection updated:`, {
-						flipHorizontal: prop.flipHorizontal,
-						flipVertical: prop.flipVertical,
-					});
-				}
-			}
 		},
 		updatePropRotation(
 			state,
@@ -708,13 +664,10 @@ const editorSlice = createSlice({
 				);
 				if (propIndex !== -1) {
 					room.props[propIndex].rotation = action.payload.rotation;
-					console.log(
-						`Prop ${action.payload.propId} rotated to ${action.payload.rotation}°`,
-					);
 				}
 			}
 		},
-		addRoom(state, action: PayloadAction<Room>) {
+		addRoom(state, action: PayloadAction<EditorRoom>) {
 			const escapeRoom = state.escapeRooms.find(
 				(er) => er.id === action.payload.escapeRoomId,
 			);
@@ -735,7 +688,7 @@ const editorSlice = createSlice({
 		setCurrentRoom(state, action: PayloadAction<string>) {
 			state.currentRoomId = action.payload;
 		},
-		addEscapeRoom(state, action: PayloadAction<EscapeRoom>) {
+		addEscapeRoom(state, action: PayloadAction<EditorEscapeRoom>) {
 			state.escapeRooms.push(action.payload);
 		},
 		removeEscapeRoom(state, action: PayloadAction<{ id: string }>) {
