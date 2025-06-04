@@ -1,4 +1,3 @@
-import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store";
 import { setSelectedTool } from "../../../store/slices/editorSlice";
@@ -12,7 +11,27 @@ import { PiCouchDuotone } from "react-icons/pi";
 import { GrMultiple } from "react-icons/gr";
 import { MdOutlineInfo } from "react-icons/md";
 
-const toolsBeforeAccepted = [
+// Define the tool type to match what the store expects
+type ToolId =
+	| "riddle"
+	| "clearRoom"
+	| "paintFloor"
+	| "eraseFloor"
+	| "door"
+	| "startPoint"
+	| "walls"
+	| "metadata"
+	| "roomManager"
+	| "props";
+
+interface Tool {
+	id: ToolId;
+	name: string;
+	icon: React.JSX.Element; // Fixed: Use React.JSX.Element instead of JSX.Element
+	order: number;
+}
+
+const toolsBeforeAccepted: Tool[] = [
 	{
 		id: "eraseFloor",
 		name: "Podłoga (Usuwaj)",
@@ -21,7 +40,7 @@ const toolsBeforeAccepted = [
 	},
 ];
 
-const toolsAfterAccepted = [
+const toolsAfterAccepted: Tool[] = [
 	{ id: "door", name: "Drzwi", icon: <BsDoorOpen />, order: 3 },
 	{
 		id: "startPoint",
@@ -38,7 +57,7 @@ const toolsAfterAccepted = [
 	{ id: "props", name: "Przedmioty", icon: <PiCouchDuotone />, order: 6 },
 ];
 
-const toolsCommon = [
+const toolsCommon: Tool[] = [
 	{ id: "paintFloor", name: "Podłoga (Rysuj)", icon: <GrBrush />, order: 1 },
 	// Add metadata tool
 	{ id: "metadata", name: "Metadane", icon: <MdOutlineInfo />, order: 7 },

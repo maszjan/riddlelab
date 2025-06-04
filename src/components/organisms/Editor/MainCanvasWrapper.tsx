@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import { Stage, Layer, Rect, Line } from "react-konva";
@@ -344,7 +343,7 @@ const MainCanvasWrapper: React.FC = () => {
 			return null;
 		}
 
-		const wallLines = [];
+		const wallLines: React.JSX.Element[] = [];
 		const gridKeys = Object.keys(currentRoom.grid);
 
 		// Helper function to check if a cell is active
@@ -522,36 +521,34 @@ const MainCanvasWrapper: React.FC = () => {
 				return null;
 			}
 
-			// Calculate transform values
+			// Calculate transformations for the IMAGE PATTERN only
+			const imageScaleX =
+				(GRID_SIZE / propImage.width) * (prop.flipHorizontal ? -1 : 1);
+			const imageScaleY =
+				(GRID_SIZE / propImage.height) * (prop.flipVertical ? -1 : 1);
 			const rotation = prop.rotation || 0;
-			const flipHorizontal = prop.flipHorizontal || false;
-			const flipVertical = prop.flipVertical || false;
 
-			// Calculate scale values for reflection
-			const scaleX = flipHorizontal ? -1 : 1;
-			const scaleY = flipVertical ? -1 : 1;
-
-			// Calculate offset for the center of the cell
-			const offsetX = prop.position.col * GRID_SIZE + GRID_SIZE / 2;
-			const offsetY = prop.position.row * GRID_SIZE + GRID_SIZE / 2;
+			// Calculate pattern offset for flipped images
+			const patternOffsetX = prop.flipHorizontal ? propImage.width : 0;
+			const patternOffsetY = prop.flipVertical ? propImage.height : 0;
 
 			return (
 				<Rect
 					key={prop.id}
-					x={prop.position.col * GRID_SIZE}
-					y={prop.position.row * GRID_SIZE}
+					x={prop.position.col * GRID_SIZE} // Keep position unchanged
+					y={prop.position.row * GRID_SIZE} // Keep position unchanged
 					width={GRID_SIZE}
 					height={GRID_SIZE}
 					fillPatternImage={propImage}
 					fillPatternScale={{
-						x: (GRID_SIZE / propImage.width) * scaleX,
-						y: (GRID_SIZE / propImage.height) * scaleY,
+						x: imageScaleX, // Apply reflection to image scale only
+						y: imageScaleY, // Apply reflection to image scale only
 					}}
-					fillPatternRotation={rotation}
 					fillPatternOffset={{
-						x: flipHorizontal ? propImage.width : 0,
-						y: flipVertical ? propImage.height : 0,
+						x: patternOffsetX, // Offset pattern for proper reflection
+						y: patternOffsetY, // Offset pattern for proper reflection
 					}}
+					fillPatternRotation={rotation} // Apply rotation to image only
 					stroke={
 						isSelected ? "#FF9900" : prop.hasCollider ? "green" : "transparent"
 					}

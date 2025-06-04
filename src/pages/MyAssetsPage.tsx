@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import AssetLibrary from "../components/organisms/Assets/AssetLibrary";
 import UserAssetLimit from "../components/molecules/UserAssetLimit";
 import CreateAssetModal from "../components/organisms/Assets/CreateAssetModal";
@@ -37,12 +37,25 @@ const MyAssetsPage = () => {
 		refetchAssetLimit();
 	};
 
+	// Convert AssetData to the expected format
+	const convertedAssetsLimit = assetsLimit
+		? {
+				used: assetsLimit.asset_count,
+				total: assetsLimit.asset_limit,
+				asset_count: assetsLimit.asset_count,
+				asset_limit: assetsLimit.asset_limit,
+		  }
+		: null;
+
+	// Convert Error to string
+	const errorMessage = limitsError ? limitsError.message : null;
+
 	return (
 		<div className='container mx-auto p-6'>
 			<UserAssetLimit
-				assetsLimit={assetsLimit}
+				assetsLimit={convertedAssetsLimit}
 				loading={limitsLoading}
-				error={limitsError}
+				error={errorMessage}
 				onOpenModal={handleOpenModal}
 			/>
 

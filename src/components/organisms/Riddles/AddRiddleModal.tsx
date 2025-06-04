@@ -1,20 +1,39 @@
-import React, { useState } from "react";
+import { useState } from "react"; // Removed React import since it's not used
 import { useDispatch } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
-import { RIDDLE_TYPES, RIDDLE_TYPE_LABELS } from "../../../utils/riddleHelpers";
+import {
+	RIDDLE_TYPES,
+	RIDDLE_TYPE_LABELS,
+	RiddleType,
+} from "../../../utils/riddleHelpers";
 import { addRiddle } from "../../../store/slices/editorSlice";
 import AssetPickerModal from "../Editor/AssetPickerModal";
 import useGetAsset from "../../../hooks/useGetAsset";
 import { MdOutlineTexture } from "react-icons/md";
 
-const AddRiddleModal = ({ isOpen, onClose }) => {
+interface AddRiddleModalProps {
+	isOpen: boolean;
+	onClose: () => void;
+}
+
+interface RiddleForm {
+	title: string;
+	type: RiddleType;
+	question: string;
+	answer: string;
+	hints: string[]; // Fixed: explicit string[] instead of never[]
+}
+
+const AddRiddleModal: React.FC<AddRiddleModalProps> = ({ isOpen, onClose }) => {
+	// Fixed: added proper types
 	const dispatch = useDispatch();
-	const [form, setForm] = useState({
+	const [form, setForm] = useState<RiddleForm>({
+		// Fixed: added explicit type
 		title: "",
 		type: RIDDLE_TYPES.KNOWLEDGE,
 		question: "",
 		answer: "",
-		hints: [],
+		hints: [] as string[], // Fixed: explicit string[] type
 	});
 	const [newHint, setNewHint] = useState("");
 	const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
@@ -64,7 +83,7 @@ const AddRiddleModal = ({ isOpen, onClose }) => {
 				type: RIDDLE_TYPES.KNOWLEDGE,
 				question: "",
 				answer: "",
-				hints: [],
+				hints: [] as string[], // Fixed: explicit string[] type
 			});
 			setSelectedAssetId(null);
 			setNewHint("");
@@ -93,7 +112,9 @@ const AddRiddleModal = ({ isOpen, onClose }) => {
 
 				<select
 					value={form.type}
-					onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+					onChange={(e) =>
+						setForm((f) => ({ ...f, type: e.target.value as RiddleType }))
+					} // Fixed: added type assertion
 					className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'>
 					{Object.entries(RIDDLE_TYPE_LABELS).map(([value, label]) => (
 						<option
@@ -196,7 +217,7 @@ const AddRiddleModal = ({ isOpen, onClose }) => {
 				<AssetPickerModal
 					isOpen={isAssetModalOpen}
 					onClose={() => setIsAssetModalOpen(false)}
-					onSelect={(assetId) => {
+					onSelect={(assetId: number) => {
 						setSelectedAssetId(assetId);
 						setIsAssetModalOpen(false);
 					}}

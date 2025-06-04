@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuthorizedApiClient } from "../utils/apiHelpers";
-import { AssetResponse } from "../interfaces/assetInterfaces";
+import { AssetResponse } from "../interfaces";
 
 const useGetAsset = (id: number | null) => {
 	const [asset, setAsset] = useState<AssetResponse | null>(null);

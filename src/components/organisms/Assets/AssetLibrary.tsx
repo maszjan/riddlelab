@@ -1,16 +1,50 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import AssetCard from "../../atoms/AssetCard";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 
-const assetTypeNames = {
+// Define asset types
+type AssetType = "door" | "floor" | "prop" | "riddle";
+
+// Define asset interface
+interface Asset {
+	id: number;
+	name: string;
+	is_public: boolean;
+	url?: string;
+	type?: string;
+}
+
+// ✅ FIX 1: Change from interface to type for mapped types
+type AssetsResponse = {
+	[K in AssetType]?: Asset[];
+};
+
+// Define component props interface
+interface AssetLibraryProps {
+	assets: AssetsResponse | null;
+	loading: boolean;
+	error: Error | null;
+	refetchAssets?: () => void;
+}
+
+// Define expanded types state
+type ExpandedTypesState = Record<AssetType, boolean>;
+
+// ✅ FIX 2: Simplify asset type names without conflicting index signatures
+const assetTypeNames: Record<AssetType, string> = {
 	door: "Drzwi",
 	floor: "Podłogi",
 	prop: "Przedmioty",
 	riddle: "Zagadki",
 };
 
-const AssetLibrary = ({ assets, loading, error, refetchAssets }) => {
-	const [expandedTypes, setExpandedTypes] = useState({
+const AssetLibrary = ({
+	assets,
+	loading,
+	error,
+	refetchAssets,
+}: AssetLibraryProps) => {
+	const [expandedTypes, setExpandedTypes] = useState<ExpandedTypesState>({
 		door: true,
 		floor: true,
 		prop: true,
@@ -18,7 +52,8 @@ const AssetLibrary = ({ assets, loading, error, refetchAssets }) => {
 	});
 	const [showPublicAssets, setShowPublicAssets] = useState(true);
 
-	const toggleType = (type) => {
+	// ✅ FIX 3: Improve type safety for toggleType function
+	const toggleType = (type: AssetType) => {
 		setExpandedTypes((prev) => ({
 			...prev,
 			[type]: !prev[type],
@@ -30,7 +65,6 @@ const AssetLibrary = ({ assets, loading, error, refetchAssets }) => {
 	};
 
 	const handleAssetDelete = () => {
-		
 		if (refetchAssets) {
 			refetchAssets();
 		}
@@ -60,12 +94,19 @@ const AssetLibrary = ({ assets, loading, error, refetchAssets }) => {
 		);
 	}
 
-	const filteredAssets = {};
-	Object.entries(assets).forEach(([type, typeAssets]) => {
-		filteredAssets[type] = typeAssets.filter((asset) =>
-			showPublicAssets ? true : !asset.is_public,
-		);
-	});
+	// ✅ FIX 4: Improve type safety for filtered assets
+	const filteredAssets: Partial<Record<AssetType, Asset[]>> = {};
+
+	// ✅ FIX 5: Type-safe iteration over assets
+	(Object.entries(assets) as Array<[AssetType, Asset[] | undefined]>).forEach(
+		([type, typeAssets]) => {
+			if (Array.isArray(typeAssets)) {
+				filteredAssets[type] = typeAssets.filter((asset: Asset) =>
+					showPublicAssets ? true : !asset.is_public,
+				);
+			}
+		},
+	);
 
 	return (
 		<div className='asset-library'>
@@ -86,43 +127,50 @@ const AssetLibrary = ({ assets, loading, error, refetchAssets }) => {
 				</label>
 			</div>
 
-			{Object.entries(filteredAssets).map(([type, typeAssets]) => (
-				<div key={type} className='asset-category mb-8'>
-					<div
-						className='flex justify-between items-center cursor-pointer'
-						onClick={() => toggleType(type)}>
-						<h2 className='text-2xl font-bold capitalize mb-4 text-mainMint'>
-							{assetTypeNames[type] || type} ({typeAssets.length})
-						</h2>
-						<div className='text-mainMint mb-4'>
-							{expandedTypes[type] ? <FaChevronUp /> : <FaChevronDown />}
-						</div>
-					</div>
+			{/* ✅ FIX 6: Type-safe iteration and better type guards */}
+			{(Object.entries(filteredAssets) as Array<[AssetType, Asset[]]>).map(
+				([type, typeAssets]) => {
+					// Type guard to ensure we have a valid array
+					if (!Array.isArray(typeAssets)) return null;
 
-					<div className='border-b border-gray-700 mb-4'></div>
-
-					{expandedTypes[type] && (
-						<>
-							{typeAssets.length > 0 ? (
-								<div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 transition-all duration-300'>
-									{typeAssets.map((asset) => (
-										<AssetCard
-											key={asset.id}
-											asset={asset}
-											onDelete={handleAssetDelete}
-										/>
-									))}
+					return (
+						<div key={type} className='asset-category mb-8'>
+							<div
+								className='flex justify-between items-center cursor-pointer'
+								onClick={() => toggleType(type)}>
+								<h2 className='text-2xl font-bold capitalize mb-4 text-mainMint'>
+									{assetTypeNames[type]} ({typeAssets.length})
+								</h2>
+								<div className='text-mainMint mb-4'>
+									{expandedTypes[type] ? <FaChevronUp /> : <FaChevronDown />}
 								</div>
-							) : (
-								<p className='text-gray-400 italic'>
-									Brak zasobów typu{" "}
-									{assetTypeNames[type]?.toLowerCase() || type}
-								</p>
+							</div>
+
+							<div className='border-b border-gray-700 mb-4'></div>
+
+							{expandedTypes[type] && (
+								<>
+									{typeAssets.length > 0 ? (
+										<div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 transition-all duration-300'>
+											{typeAssets.map((asset: Asset) => (
+												<AssetCard
+													key={asset.id}
+													asset={asset}
+													onDelete={handleAssetDelete}
+												/>
+											))}
+										</div>
+									) : (
+										<p className='text-gray-400 italic'>
+											Brak zasobów typu {assetTypeNames[type].toLowerCase()}
+										</p>
+									)}
+								</>
 							)}
-						</>
-					)}
-				</div>
-			))}
+						</div>
+					);
+				},
+			)}
 		</div>
 	);
 };

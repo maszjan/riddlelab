@@ -1,7 +1,24 @@
 import React from "react";
 import { FaPlusCircle } from "react-icons/fa";
 
-const UserAssetLimit = ({ assetsLimit, loading, error, onOpenModal }) => {
+interface UserAssetLimitProps {
+	assetsLimit: {
+		used: number;
+		total: number;
+		asset_count: number;
+		asset_limit: number;
+	} | null;
+	loading: boolean;
+	error: string | null;
+	onOpenModal: () => void;
+}
+
+const UserAssetLimit: React.FC<UserAssetLimitProps> = ({
+	assetsLimit,
+	loading,
+	error,
+	onOpenModal,
+}) => {
 	if (loading) {
 		return (
 			<div className='flex justify-center py-4'>

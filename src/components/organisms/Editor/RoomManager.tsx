@@ -1,30 +1,35 @@
-import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "../../store";
-import { setCurrentRoom } from "../../store/slices/editorSlice";
+import { RootState } from "../../../store";
+import { setCurrentRoom } from "../../../store/slices/editorSlice";
 
-const RoomManager = () => {
+const RoomManager: React.FC = () => {
 	const dispatch = useDispatch();
-	const rooms = useSelector((state: RootState) => state.editor.rooms);
-	const currentRoomId = useSelector(
-		(state: RootState) => state.editor.currentRoomId,
+	const { currentEscapeRoomId, currentRoomId } = useSelector(
+		(state: RootState) => state.editor,
 	);
 
+	const currentEscapeRoom = useSelector((state: RootState) =>
+		state.editor.escapeRooms.find((er) => er.id === currentEscapeRoomId),
+	);
+
+	const rooms = currentEscapeRoom?.rooms || [];
+
 	return (
-		<div className='w-64 bg-gray-100 p-4 border-r border-gray-300 h-full'>
-			<h2 className='text-lg font-bold mb-4'>Rooms</h2>
-			<ul className='space-y-2'>
-				{rooms.map((room) => (
-					<li
-						key={room.id}
-						onClick={() => dispatch(setCurrentRoom(room.id))}
-						className={`p-2 rounded-lg cursor-pointer ${
-							currentRoomId === room.id ? "bg-mainMint text-dark" : "bg-white"
-						}`}>
-						{room.name}
-					</li>
-				))}
-			</ul>
+		<div className='p-4'>
+			<h3 className='text-lg font-bold text-white mb-4'>Room Manager</h3>
+
+			{rooms.map((room) => (
+				<button
+					key={room.id}
+					onClick={() => dispatch(setCurrentRoom(room.id))}
+					className={`block w-full p-3 mb-2 rounded text-left ${
+						currentRoomId === room.id
+							? "bg-blue-600 text-white"
+							: "bg-gray-700 text-gray-300 hover:bg-gray-600"
+					}`}>
+					{room.name || `Room ${room.id}`}
+				</button>
+			))}
 		</div>
 	);
 };
