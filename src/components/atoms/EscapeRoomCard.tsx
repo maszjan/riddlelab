@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
-import { IoPlay, IoCreate, IoImage, IoTime, IoTrash } from "react-icons/io5";
+import { IoPlay, IoCreate, IoTime, IoTrash } from "react-icons/io5";
 
 interface EscapeRoomCardProps {
 	escapeRoom: {
@@ -10,7 +10,7 @@ interface EscapeRoomCardProps {
 		thumbnail_url?: string;
 		updated_at: string;
 		rooms?: any[];
-		user_id?: number; // Owner's user ID
+		user_id?: number;
 	};
 	mode?: "editor" | "player";
 	onEdit?: (id: number) => void;
@@ -48,7 +48,6 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 	};
 
 	const handleCardClick = () => {
-		// If it's player mode and we only have play button, clicking anywhere should play
 		if (mode === "player" && !showEditButton && onPlay) {
 			onPlay(escapeRoom.id);
 		}
@@ -65,7 +64,6 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 
 		setIsDeleting(true);
 		try {
-			// Call the onDelete prop which will handle the API call
 			if (onDelete) {
 				await onDelete(escapeRoom.id);
 			}
@@ -79,7 +77,7 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 
 	return (
 		<div
-			className={`bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-colors group cursor-pointer ${className} ${
+			className={`bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-all duration-300 group cursor-pointer ${className} ${
 				isDeleting ? "opacity-50 pointer-events-none" : ""
 			}`}
 			onClick={
@@ -94,12 +92,14 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 						className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
 					/>
 				) : (
-					<div className='w-full h-full flex items-center justify-center'>
-						<IoImage size={48} className='text-gray-400' />
+					<div className='w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900'>
+						<span className='text-gray-400 text-sm md:text-base'>
+							Podgląd pokoju
+						</span>
 					</div>
 				)}
 
-				{/* Play button overlay - only show if we have both edit and play buttons */}
+				{/* Play button overlay */}
 				{showEditButton && showPlayButton && onPlay && (
 					<div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100'>
 						<button
@@ -113,7 +113,7 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 					</div>
 				)}
 
-				{/* Delete button - top right corner */}
+				{/* Delete button */}
 				{showDeleteButton && onDelete && (
 					<div className='absolute top-2 right-2'>
 						<button
@@ -128,14 +128,14 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 			</div>
 
 			{/* Content */}
-			<div className='p-4'>
+			<div className='p-3 md:p-4'>
 				<h3
-					className='font-semibold text-lg mb-2 truncate'
+					className='font-semibold text-base md:text-lg mb-2 truncate text-light'
 					title={escapeRoom.name}>
 					{escapeRoom.name}
 				</h3>
 				<p
-					className='text-gray-400 text-sm mb-3 line-clamp-2'
+					className='text-gray-400 text-xs md:text-sm mb-3 line-clamp-2 leading-relaxed'
 					title={escapeRoom.description}>
 					{escapeRoom.description}
 				</p>
@@ -145,9 +145,19 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 					<div className='flex items-center justify-between text-xs text-gray-500 mb-4'>
 						<div className='flex items-center'>
 							<IoTime className='mr-1' />
-							{formatDate(escapeRoom.updated_at)}
+							<span className='hidden sm:inline'>
+								{formatDate(escapeRoom.updated_at)}
+							</span>
+							<span className='sm:hidden'>
+								{new Date(escapeRoom.updated_at).toLocaleDateString("pl-PL")}
+							</span>
 						</div>
-						{escapeRoom.rooms && <div>{escapeRoom.rooms.length} pokoi</div>}
+						{escapeRoom.rooms && (
+							<div>
+								{escapeRoom.rooms.length}{" "}
+								{escapeRoom.rooms.length === 1 ? "pokój" : "pokoi"}
+							</div>
+						)}{" "}
 					</div>
 				)}
 
@@ -162,9 +172,10 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 								}}
 								className={`${
 									showPlayButton ? "flex-1" : "w-full"
-								} bg-gray-600 hover:bg-gray-500 px-3 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-1`}>
-								<IoCreate size={16} />
-								Edytuj
+								} bg-gray-600 hover:bg-gray-500 px-3 py-2 rounded text-xs md:text-sm font-medium transition-colors flex items-center justify-center gap-1`}>
+								<IoCreate size={14} />
+								<span className='hidden sm:inline'>Edytuj</span>
+								<span className='sm:hidden'>Edit</span>
 							</button>
 						)}
 						{showPlayButton && onPlay && (
@@ -175,9 +186,10 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 								}}
 								className={`${
 									showEditButton ? "flex-1" : "w-full"
-								} bg-mainMint hover:bg-mainMint/80 text-gray-900 px-3 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-1`}>
-								<IoPlay size={16} />
-								Zagraj
+								} bg-mainMint hover:bg-mainMint/80 text-gray-900 px-3 py-2 rounded text-xs md:text-sm font-medium transition-colors flex items-center justify-center gap-1`}>
+								<IoPlay size={14} />
+								<span className='hidden sm:inline'>Zagraj</span>
+								<span className='sm:hidden'>Play</span>
 							</button>
 						)}
 					</div>

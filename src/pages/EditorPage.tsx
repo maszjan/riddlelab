@@ -190,33 +190,47 @@ const EditorPage: React.FC = () => {
 	}
 
 	return (
-		<div className='min-h-screen bg-gray-800 text-white p-6'>
-			<div className='max-w-7xl mx-auto'>
-				{/* Header */}
-				<div className='flex justify-between items-center mb-8'>
-					<div>
-						<h1 className='text-3xl font-bold mb-2'>Moje Escape Roomy</h1>
-						<p className='text-gray-400'>
-							Wybierz escape room do edycji lub utwórz nowy
-						</p>
-					</div>
-					<div className='flex gap-3'>
-						<button
-							onClick={refetch}
-							disabled={loading}
-							className='flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors disabled:opacity-50'>
-							<IoRefresh className={loading ? "animate-spin" : ""} />
-							Odśwież
-						</button>
-						<button
-							onClick={handleCreateNewEscapeRoom}
-							className='flex items-center gap-2 bg-mainMint hover:bg-mainMint/80 text-gray-900 px-6 py-2 rounded-lg font-semibold transition-colors'>
-							<IoAdd size={20} />
-							Utwórz nowy
-						</button>
+		<div className='min-h-screen bg-gradient-to-br from-dark via-slate-800 to-dark'>
+			{/* Header with Background */}
+			<div className='relative py-16 px-4 md:px-6'>
+				<div className='absolute inset-0'>
+					<img
+						src='/create.png'
+						alt='Editor Background'
+						className='w-full h-full object-cover opacity-20'
+					/>
+				</div>
+				<div className='relative z-10 max-w-6xl mx-auto'>
+					<div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4'>
+						<div>
+							<h1 className='text-3xl md:text-4xl font-bold mb-2 text-light text-center'>
+								Moje Escape Roomy
+							</h1>
+							<p className='text-gray-400'>
+								Wybierz escape room do edycji lub utwórz nowy
+							</p>
+						</div>
+						<div className='flex gap-3'>
+							<button
+								onClick={refetch}
+								disabled={loading}
+								className='flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50'>
+								<IoRefresh className={loading ? "animate-spin" : ""} />
+								Odśwież
+							</button>
+							<button
+								onClick={handleCreateNewEscapeRoom}
+								className='flex items-center gap-2 bg-mainMint hover:bg-mainMint/80 text-gray-900 px-6 py-2 rounded-lg font-semibold transition-colors'>
+								<IoAdd size={20} />
+								Utwórz nowy
+							</button>
+						</div>
 					</div>
 				</div>
+			</div>
 
+			{/* Content Section - No Background */}
+			<div className='max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 pb-16 mt-12'>
 				{/* Loading State */}
 				{loading && (
 					<div className='flex items-center justify-center py-12'>
@@ -229,7 +243,7 @@ const EditorPage: React.FC = () => {
 
 				{/* Error State */}
 				{error && (
-					<div className='bg-red-600 text-white p-4 rounded-lg mb-6 flex items-center'>
+					<div className='bg-red-600/20 border border-red-500 text-red-300 p-4 rounded-lg mb-6 flex items-center'>
 						<IoAlert className='mr-3' size={20} />
 						<div>
 							<div className='font-semibold'>Błąd</div>
@@ -246,10 +260,12 @@ const EditorPage: React.FC = () => {
 				{/* Empty State */}
 				{!loading && !error && escapeRooms.length === 0 && (
 					<div className='text-center py-12'>
-						<div className='bg-gray-700 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4'>
+						<div className='bg-gray-700/80 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4'>
 							<IoImage size={32} className='text-gray-400' />
 						</div>
-						<h3 className='text-xl font-semibold mb-2'>Brak escape roomów</h3>
+						<h3 className='text-xl font-semibold mb-2 text-light'>
+							Brak escape roomów
+						</h3>
 						<p className='text-gray-400 mb-6'>
 							Nie masz jeszcze żadnych escape roomów. Utwórz swój pierwszy!
 						</p>
@@ -261,6 +277,7 @@ const EditorPage: React.FC = () => {
 					</div>
 				)}
 
+				{/* Escape Rooms Grid */}
 				{!loading && !error && escapeRooms.length > 0 && (
 					<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
 						{escapeRooms.map((escapeRoom) => (
@@ -273,8 +290,9 @@ const EditorPage: React.FC = () => {
 								onPlay={handlePlayEscapeRoom}
 								showEditButton={true}
 								showPlayButton={true}
-								showDeleteButton={true} // Always show delete since these are MY escape rooms
+								showDeleteButton={true}
 								showMetaInfo={true}
+								className='bg-gray-800/90 backdrop-blur-sm border border-gray-600 hover:shadow-xl hover:border-mainMint transition-all duration-200'
 							/>
 						))}
 					</div>

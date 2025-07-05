@@ -54,7 +54,7 @@ const UserAssetLimit: React.FC<UserAssetLimitProps> = ({
 			: 0;
 
 	return (
-		<div className='bg-gray-800 rounded-lg py-4 mb-6 shadow-md'>
+		<div className='bg-gray-800 rounded-lg px-6 py-4 mb-6 shadow-md mt-12'>
 			<div className='flex justify-between items-center mb-3'>
 				<h3 className='text-xl py-4 font-bold text-mainMint'>
 					Assety ({assetsLimit.asset_count})

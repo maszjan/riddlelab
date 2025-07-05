@@ -12,6 +12,9 @@ import {
 	clearRoom,
 	updateWalls,
 } from "../../../store/slices/editorSlice";
+import { selectUser } from "../../../store/slices/userSlice";
+import AvatarKonvaElements from "../../atoms/AvatarKonvaElements";
+import useGetAsset from "../../../hooks/useGetAsset";
 
 const GRID_SIZE = 40; // Size of each grid cell
 const ROOM_WIDTH = 30; // Number of columns
@@ -19,6 +22,8 @@ const ROOM_HEIGHT = 20; // Number of rows
 
 const MainCanvasWrapper: React.FC = () => {
 	const dispatch = useDispatch();
+	const user = useSelector(selectUser);
+
 	const selectedTool = useSelector(
 		(state: RootState) => state.editor.selectedTool,
 	);
@@ -37,6 +42,12 @@ const MainCanvasWrapper: React.FC = () => {
 			(room) => room.id === state.editor.currentRoomId,
 		);
 	});
+
+	// Add this hook to fetch door texture asset
+	const { asset: doorTextureAsset } = useGetAsset(
+		currentRoom?.doorTextureAssetId || null,
+	);
+
 	const floorTextureUrl = currentRoom?.floorTexture;
 	const wallColor = currentRoom?.wallColor || "#888888"; // Get the wall color
 	const wallThickness = currentRoom?.wallThickness || 6; // Get the wall thickness dynamically
@@ -108,15 +119,15 @@ const MainCanvasWrapper: React.FC = () => {
 			setFloorTexture(null);
 		}
 
-		// Load door texture
-		if (currentRoom?.doorTexture) {
-			console.log("Loading door texture:", currentRoom.doorTexture);
-			loadTexture(currentRoom.doorTexture, setDoorTexture, "door");
+		// Load door texture - prioritize doorTexture, fallback to asset URL
+		const doorTextureUrl = currentRoom?.doorTexture || doorTextureAsset?.url;
+		if (doorTextureUrl) {
+			console.log("Loading door texture:", doorTextureUrl);
+			loadTexture(doorTextureUrl, setDoorTexture, "door");
 		} else {
 			setDoorTexture(null);
 		}
 
-		// Load prop textures
 		if (currentRoom?.props && currentRoom.props.length > 0) {
 			const newPropImages: Record<string, HTMLImageElement | null> = {};
 			currentRoom.props.forEach((prop) => {
@@ -145,13 +156,11 @@ const MainCanvasWrapper: React.FC = () => {
 					newPropImages[prop.id] = null;
 				}
 			});
-			// Clear props that are no longer in the room
 			setPropImages(newPropImages);
 		} else {
 			setPropImages({});
 		}
 
-		// Load riddle textures
 		if (currentRoom?.riddles && currentRoom.riddles.length > 0) {
 			const newRiddleImages: Record<string, HTMLImageElement | null> = {};
 			currentRoom.riddles.forEach((riddle) => {
@@ -191,6 +200,7 @@ const MainCanvasWrapper: React.FC = () => {
 	}, [
 		floorTextureUrl,
 		currentRoom?.doorTexture,
+		doorTextureAsset?.url, // Add this dependency
 		currentRoom?.props,
 		currentRoom?.riddles,
 	]);
@@ -477,34 +487,42 @@ const MainCanvasWrapper: React.FC = () => {
 		);
 	};
 
-	const renderStartingPoint = () => {
+	const renderStartingPoint = (user: any) => {
 		if (!currentRoom?.startingPoint) {
 			return null;
 		}
 
 		const { row, col } = currentRoom.startingPoint;
 
-		// Render a distinctive marker for the starting point
+		// Get user avatar colors from Redux or props
+		let avatarColors = {
+			skin_color: "#FDBCB4",
+			hair_color: "#8B4513",
+			eye_color: "#4A90E2",
+			outfit_color: "#FF6B6B",
+		};
+
+		// Try to get user's actual avatar configuration
+		if (user?.player_configuration) {
+			try {
+				if (typeof user.player_configuration === "string") {
+					avatarColors = JSON.parse(user.player_configuration).avatar;
+				} else {
+					avatarColors = user.player_configuration.avatar;
+				}
+			} catch (e) {
+				console.error("Error parsing avatar configuration:", e);
+				// Use default colors
+			}
+		}
+
 		return (
-			<React.Fragment>
-				{/* Circle to represent the starting point */}
-				<Rect
-					x={col * GRID_SIZE}
-					y={row * GRID_SIZE}
-					width={GRID_SIZE}
-					height={GRID_SIZE}
-					fill='transparent'
-				/>
-				{/* Add a "start" icon or text */}
-				<Rect
-					x={col * GRID_SIZE + GRID_SIZE / 4}
-					y={row * GRID_SIZE + GRID_SIZE / 4}
-					width={GRID_SIZE / 2}
-					height={GRID_SIZE / 2}
-					fill='#00AA00'
-					cornerRadius={GRID_SIZE / 4}
-				/>
-			</React.Fragment>
+			<AvatarKonvaElements
+				colors={avatarColors}
+				x={col * GRID_SIZE}
+				y={row * GRID_SIZE}
+				gridSize={GRID_SIZE}
+			/>
 		);
 	};
 
@@ -617,7 +635,7 @@ const MainCanvasWrapper: React.FC = () => {
 			<Layer>{renderGrid()}</Layer>
 			<Layer>{renderWalls()}</Layer>
 			<Layer>{renderDoors()}</Layer>
-			<Layer>{renderStartingPoint()}</Layer>
+			<Layer>{renderStartingPoint(user)}</Layer>
 			<Layer>{renderProps()}</Layer>
 			<Layer>{renderRiddles()}</Layer>
 		</Stage>

@@ -51,22 +51,46 @@ const MyAssetsPage = () => {
 	const errorMessage = limitsError ? limitsError.message : null;
 
 	return (
-		<div className='container mx-auto p-6'>
-			<UserAssetLimit
-				assetsLimit={convertedAssetsLimit}
-				loading={limitsLoading}
-				error={errorMessage}
-				onOpenModal={handleOpenModal}
-			/>
+		<div className='min-h-screen bg-gradient-to-br from-dark via-slate-800 to-dark'>
+			{/* Header with Background */}
+			<div className='relative py-16 px-4 md:px-6'>
+				<div className='absolute inset-0'>
+					<img
+						src='/assets.png'
+						alt='Assets Background'
+						className='w-full h-full object-cover opacity-20'
+					/>
+				</div>
+				<div className='relative z-10 max-w-7xl mx-auto'>
+					<div className='text-center'>
+						<h1 className='text-3xl md:text-4xl font-bold mb-2 text-light'>
+							Moje Assety
+						</h1>
+						<p className='text-gray-400'>
+							Zarządzaj swoimi assetami i twórz nowe
+						</p>
+					</div>
+				</div>
+			</div>
 
-			<AssetLibrary
-				assets={assets}
-				loading={assetsLoading}
-				error={assetsError}
-				refetchAssets={handleAssetDeleted}
-			/>
+			{/* Content Section - No Background */}
+			<div className='max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 pb-16'>
+				<UserAssetLimit
+					assetsLimit={convertedAssetsLimit}
+					loading={limitsLoading}
+					error={errorMessage}
+					onOpenModal={handleOpenModal}
+				/>
 
-			<CreateAssetModal isOpen={isModalOpen} onClose={handleCloseModal} />
+				<AssetLibrary
+					assets={assets}
+					loading={assetsLoading}
+					error={assetsError}
+					refetchAssets={handleAssetDeleted}
+				/>
+
+				<CreateAssetModal isOpen={isModalOpen} onClose={handleCloseModal} />
+			</div>
 		</div>
 	);
 };
