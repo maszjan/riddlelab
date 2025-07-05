@@ -12,8 +12,7 @@ export default {
 				"2xl": "1536px",
 			},
 			colors: {
-				mainBlue: "#106ebe",
-				mainMint: "#0ffcbe",	
+				mainMint: "#0ffcbe",
 				dark: "#1e293b",
 				light: "#f8fafc",
 			},

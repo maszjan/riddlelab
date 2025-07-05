@@ -5,12 +5,12 @@ import MainCanvasWrapper from "./Editor/MainCanvasWrapper";
 
 const Editor: React.FC = () => {
 	return (
-		<div className='flex h-screen w-screen bg-gray-900 text-white relative'>
-			<div className='absolute top-0 left-0 w-full z-50'>
+		<div className='flex h-screen mx- bg-gray-900 text-white relative'>
+			<div className='absolute top-0 left-0 w-auto z-50'>
 				<FloatingToolbar />
 			</div>
 
-			<div className='flex-grow bg-gray-800 relative overflow-hidden flex items-center justify-center'>
+			<div className='flex-grow bg-gray-800 relative overflow-hidden flex items-center justify-center pl-8'>
 				<div className='relative'>
 					<MainCanvasWrapper />
 				</div>

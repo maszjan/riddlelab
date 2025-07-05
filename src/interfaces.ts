@@ -122,6 +122,13 @@ export interface Riddle {
 	answer: string;
 	hints: string[];
 	options: any;
+	data?: {
+		title?: string;
+		question?: string;
+		answer?: string;
+		hints?: string[];
+		options?: any;
+	};
 	assetId: number | null;
 	texture: string | null;
 }

@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from "react";
 import { RiddleFormState, RiddleType } from "../../../interfaces";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,6 +29,7 @@ import { isGridFilled, isBorderClosed } from "../../../utils/editorHelpers";
 import { MdOutlineTexture } from "react-icons/md";
 import { FiPlusCircle } from "react-icons/fi";
 import AddRiddleModal from "../Riddles/AddRiddleModal";
+import EditRiddleModal from "../Riddles/EditRiddleModal";
 import AssetPickerModal from "./AssetPickerModal";
 import useGetAsset from "../../../hooks/useGetAsset";
 import SaveEscapeRoomModal from "../EscapeRooms/SaveEscapeRoomModal";
@@ -77,7 +77,6 @@ const RightSidebar = () => {
 	const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
 	const [currentAssetType, setCurrentAssetType] = useState<string>("floor");
 	const { asset: selectedAssetDetails } = useGetAsset(selectedAssetId);
-
 	const [wallColor, setWallColor] = useState<string>(
 		currentRoom?.wallColor || "#888888",
 	);
@@ -117,13 +116,14 @@ const RightSidebar = () => {
 	const [riddleForm, setRiddleForm] = useState<RiddleFormState>({
 		id: null,
 		title: "",
-		type: "knowledge" as RiddleType, // Fix: use proper RiddleType instead of RIDDLE_TYPE_LABELS
+		type: "knowledge" as RiddleType,
 		question: "",
 		answer: "",
 		hints: [],
 		isEditing: false,
 	});
 	const [isAddRiddleModalOpen, setIsAddRiddleModalOpen] = useState(false);
+	const [editingRiddleId, setEditingRiddleId] = useState<string | null>(null);
 
 	const resetRiddleForm = () => {
 		setRiddleForm({
@@ -135,7 +135,35 @@ const RightSidebar = () => {
 			hints: [],
 			isEditing: false,
 		});
+		setEditingRiddleId(null);
 	};
+
+	// const handleEditRiddle = (riddle: any) => {
+	// 	setRiddleForm({
+	// 		id: riddle.id,
+	// 		title: riddle.title || "",
+	// 		type: riddle.type || "knowledge",
+	// 		question: riddle.question || "",
+	// 		answer: riddle.answer || "",
+	// 		hints: riddle.hints || [],
+	// 		isEditing: true,
+	// 	});
+	// 	setEditingRiddleId(riddle.id);
+	// 	setIsAddRiddleModalOpen(true);
+	// };
+
+	// const handleSaveRiddleEdit = (updatedRiddle: any) => {
+	// 	if (editingRiddleId && currentRoom) {
+	// 		dispatch(
+	// 			updateRiddle({
+	// 				roomId: currentRoom.id,
+	// 				riddleId: editingRiddleId,
+	// 				riddleData: updatedRiddle,
+	// 			}),
+	// 		);
+	// 		resetRiddleForm();
+	// 	}
+	// };
 
 	const handleClearWallColor = () => {
 		setWallColor("#888888");
@@ -157,7 +185,7 @@ const RightSidebar = () => {
 		dispatch(
 			setDoorTexture({
 				texture: selectedAssetDetails?.url || null,
-				doorTextureAssetId: selectedAssetDetails?.id || null, // Fix: add missing property
+				doorTextureAssetId: selectedAssetDetails?.id || null,
 			}),
 		);
 	};
@@ -219,7 +247,6 @@ const RightSidebar = () => {
 				wallThickness: 6,
 				floorTexture: null,
 				door: {
-					// Fix: provide proper door object instead of null
 					row: 0,
 					col: 0,
 					rotation: 0,
@@ -245,7 +272,6 @@ const RightSidebar = () => {
 			currentEscapeRoom.rooms.length > 1
 		) {
 			dispatch(removeRoom({ roomId }));
-			// Set current room to the first available room
 			const newCurrentRoom = currentEscapeRoom.rooms.find(
 				(r) => r.id !== roomId,
 			);
@@ -257,7 +283,6 @@ const RightSidebar = () => {
 		}
 	};
 
-	// Add this useEffect to load the prop library from localStorage
 	useEffect(() => {
 		const savedLibrary = localStorage.getItem("propLibrary");
 		if (savedLibrary) {
@@ -278,7 +303,7 @@ const RightSidebar = () => {
 						id: `prop-${uuidv4()}`,
 						name: libraryProp.name,
 						imageUrl: libraryProp.imageUrl,
-						assetId: libraryProp.assetId || null, // Fix: add missing assetId
+						assetId: libraryProp.assetId || null,
 						position: { row: 0, col: 0 },
 						rotation: 0,
 						flipHorizontal: false,
@@ -297,9 +322,7 @@ const RightSidebar = () => {
 	useEffect(() => {
 		if (currentRoom?.grid) {
 			const grid = currentRoom.grid;
-
 			const borderClosed = isBorderClosed(grid);
-
 			const gridFilled = borderClosed && isGridFilled(grid);
 
 			setIsBorderClosedState(borderClosed);
@@ -321,11 +344,9 @@ const RightSidebar = () => {
 		if (currentRoom) {
 			setWallColor(currentRoom.wallColor || "#888888");
 			setWallThickness(currentRoom.wallThickness || 6);
-			// Inicjalizuj ID assetów z Redux
 			setFloorAssetId(currentRoom.floorTextureAssetId || null);
 			setDoorAssetId(currentRoom.doorTextureAssetId || null);
 
-			// Ustaw selectedAssetId na podstawie aktualnego narzędzia
 			if (selectedTool === "paintFloor" && currentRoom.floorTextureAssetId) {
 				setSelectedAssetId(currentRoom.floorTextureAssetId);
 				setCurrentAssetType("floor");
@@ -397,13 +418,11 @@ const RightSidebar = () => {
 				setCurrentAssetType("door");
 			}
 
-			// Set texture preview for floor
 			if (currentRoom.floorTexture) {
 				setSelectedTexture(getDisplayUrl(currentRoom.floorTexture));
 			}
 		}
 	}, [currentRoom, selectedTool]);
-
 	const renderToolOptions = () => {
 		if (!currentRoom) return null;
 
@@ -670,6 +689,9 @@ const RightSidebar = () => {
 						</p>
 					</div>
 				);
+
+			// In the renderToolOptions function, keep only this riddle case:
+
 			case "riddle":
 				return (
 					<div>
@@ -679,7 +701,10 @@ const RightSidebar = () => {
 
 						<button
 							className='mb-4 w-full bg-mainMint text-gray-700 py-2 rounded font-semibold flex items-center justify-center'
-							onClick={() => setIsAddRiddleModalOpen(true)}>
+							onClick={() => {
+								resetRiddleForm();
+								setIsAddRiddleModalOpen(true);
+							}}>
 							<FiPlusCircle className='mr-2' /> Dodaj nową zagadkę
 						</button>
 
@@ -708,7 +733,21 @@ const RightSidebar = () => {
 								</h5>
 								<div className='grid grid-cols-2 gap-3'>
 									{currentRoom.riddles.map((riddle) => {
-										const imgUrl = getDisplayUrl(riddle.texture);
+										// Fix: Handle both full URLs and relative paths
+										let imgUrl = null;
+
+										if (riddle.texture) {
+											// If texture starts with http, use it directly
+											if (riddle.texture.startsWith("http")) {
+												imgUrl = riddle.texture;
+											} else {
+												// If it's a relative path, prepend the base URL
+												imgUrl = `http://localhost:8000${riddle.texture}`;
+											}
+										} else if (riddle.assetId) {
+											imgUrl = getDisplayUrl(riddle.assetId.toString());
+										}
+
 										const isSelected = selectedRiddle === riddle.id;
 
 										return (
@@ -724,29 +763,57 @@ const RightSidebar = () => {
 													{imgUrl ? (
 														<img
 															src={imgUrl}
-															alt={riddle.title || "Zagadka"} // Fix: use flat structure
+															alt={
+																(riddle as any).data?.title ||
+																riddle.title ||
+																"Zagadka"
+															}
 															className='w-full h-full object-cover'
 															style={{ minHeight: 56, maxHeight: 56 }}
+															onError={(e) => {
+																console.log("Image failed to load:", imgUrl);
+																// Hide the img and show the fallback
+																e.currentTarget.style.display = "none";
+																const fallback =
+																	e.currentTarget.parentElement?.querySelector(
+																		".fallback-icon",
+																	);
+																if (fallback) {
+																	(fallback as HTMLElement).style.display =
+																		"flex";
+																}
+															}}
 														/>
-													) : (
-														<div className='w-full h-full flex items-center justify-center text-gray-400 text-2xl'>
-															?
-														</div>
-													)}
+													) : null}
+													<div
+														className='fallback-icon w-full h-full flex items-center justify-center text-gray-400 text-2xl'
+														style={{ display: imgUrl ? "none" : "flex" }}>
+														?
+													</div>
 												</div>
-												{/* Title */}
+												{/* Title - Fix data access with type assertion */}
 												<div className='w-full px-2 py-1 bg-gray-800 text-center truncate text-xs font-bold text-white'>
-													{riddle.title || "Bez tytułu"}{" "}
-													{/* Fix: use flat structure */}
+													{(riddle as any).data?.title ||
+														riddle.title ||
+														`Zagadka #${riddle.id.slice(-4)}`}
 												</div>
 												{/* Action buttons */}
 												<div className='absolute top-1 right-1 flex flex-col space-y-1 opacity-0 group-hover:opacity-100 transition'>
 													<button
 														onClick={(e) => {
 															e.stopPropagation();
+															setEditingRiddleId(riddle.id);
+														}}
+														className='bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 flex items-center'
+														title='Edytuj zagadkę'>
+														Edytuj
+													</button>
+													<button
+														onClick={(e) => {
+															e.stopPropagation();
 															dispatch(setSelectedRiddle(riddle.id));
 														}}
-														className='bg-mainMint text-gray-900 text-xs px-2 py-1 rounded hover:bg-mainMint/80 mb-1'>
+														className='bg-mainMint text-gray-900 text-xs px-2 py-1 rounded hover:bg-mainMint/80'>
 														Przenieś
 													</button>
 													<button
@@ -769,25 +836,37 @@ const RightSidebar = () => {
 							</p>
 						)}
 
+						{/* Add Riddle Modal - for creating new riddles */}
 						<AddRiddleModal
 							isOpen={isAddRiddleModalOpen}
-							onClose={() => setIsAddRiddleModalOpen(false)}
+							onClose={() => {
+								setIsAddRiddleModalOpen(false);
+								resetRiddleForm();
+							}}
 						/>
 
-						<div className='mb-4'>
-							<div className='flex justify-between items-center mb-2'>
-								{riddleForm.id && (
-									<button
-										onClick={resetRiddleForm}
-										className='text-xs text-gray-400 hover:text-white'>
-										Wyczyść
-									</button>
-								)}
+						{/* Edit Riddle Modal - for editing existing riddles */}
+						<EditRiddleModal
+							isOpen={!!editingRiddleId}
+							onClose={() => setEditingRiddleId(null)}
+							riddle={currentRoom?.riddles?.find(
+								(r) => r.id === editingRiddleId,
+							)}
+						/>
+
+						{riddleForm.id && (
+							<div className='mb-4'>
+								<button
+									onClick={resetRiddleForm}
+									className='text-xs text-gray-400 hover:text-white'>
+									Wyczyść formularz
+								</button>
 							</div>
-						</div>
+						)}
 					</div>
 				);
 
+			// Remove ALL other duplicate case "riddle": statements after this one
 			case "props":
 				return (
 					<div>
@@ -1288,7 +1367,6 @@ const RightSidebar = () => {
 				isOpen={isSaveModalOpen}
 				onClose={() => setIsSaveModalOpen(false)}
 				onSuccess={() => {
-					// Fix: remove unused parameter
 					console.log("Escape Room saved successfully!");
 				}}
 			/>

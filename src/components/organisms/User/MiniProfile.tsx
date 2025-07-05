@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
+import { FaUser, FaCog, FaSignOutAlt } from "react-icons/fa";
 import useLogout from "../../../hooks/useLogout";
 import { User } from "../../../interfaces";
 import AvatarPreview from "../../molecules/AvatarPreview";
@@ -16,7 +17,8 @@ const MiniProfile: React.FC<MiniProfileProps> = ({ user }) => {
 	const buttonRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
+		const handleClickOutside = (event: Event) => {
+			// Changed from MouseEvent to Event
 			if (
 				menuRef.current &&
 				!menuRef.current.contains(event.target as Node) &&
@@ -27,11 +29,49 @@ const MiniProfile: React.FC<MiniProfileProps> = ({ user }) => {
 			}
 		};
 
-		document.addEventListener("mousedown", handleClickOutside);
+		const handleEscapeKey = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				setMenuOpen(false);
+			}
+		};
+
+		if (menuOpen) {
+			document.addEventListener("mousedown", handleClickOutside);
+			document.addEventListener("touchstart", handleClickOutside);
+			document.addEventListener("keydown", handleEscapeKey);
+		}
+
 		return () => {
 			document.removeEventListener("mousedown", handleClickOutside);
+			document.removeEventListener("touchstart", handleClickOutside);
+			document.removeEventListener("keydown", handleEscapeKey);
 		};
-	}, []);
+	}, [menuOpen]);
+
+	// Improved scroll lock that prevents layout shift
+	useEffect(() => {
+		const isMobile = window.innerWidth < 768;
+
+		if (menuOpen && isMobile) {
+			// Get current scroll position
+			const scrollY = window.scrollY;
+
+			// Apply styles to prevent scroll and layout shift
+			document.body.style.position = "fixed";
+			document.body.style.top = `-${scrollY}px`;
+			document.body.style.width = "100%";
+			document.body.style.overflow = "hidden";
+
+			return () => {
+				// Restore scroll position and remove fixed positioning
+				document.body.style.position = "";
+				document.body.style.top = "";
+				document.body.style.width = "";
+				document.body.style.overflow = "";
+				window.scrollTo(0, scrollY);
+			};
+		}
+	}, [menuOpen]);
 
 	const renderAvatar = () => {
 		if (user.avatar_url) {
@@ -55,11 +95,17 @@ const MiniProfile: React.FC<MiniProfileProps> = ({ user }) => {
 			} catch (e) {
 				console.error("Błąd parsowania konfiguracji awatara:", e);
 				return (
-					<span className='text-sm font-bold'>{user.name?.charAt(0)}</span>
+					<span className='text-xs sm:text-sm font-bold'>
+						{user.name?.charAt(0)}
+					</span>
 				);
 			}
 		} else {
-			return <span className='text-sm font-bold'>{user.name?.charAt(0)}</span>;
+			return (
+				<span className='text-xs sm:text-sm font-bold'>
+					{user.name?.charAt(0)}
+				</span>
+			);
 		}
 	};
 
@@ -67,54 +113,173 @@ const MiniProfile: React.FC<MiniProfileProps> = ({ user }) => {
 		if (!buttonRef.current) return {};
 
 		const rect = buttonRef.current.getBoundingClientRect();
+		const isMobile = window.innerWidth < 768;
+
+		if (isMobile) {
+			return {
+				position: "fixed" as const,
+				top: "50%",
+				left: "50%",
+				transform: "translate(-50%, -50%)",
+				zIndex: 9999,
+			};
+		}
+
+		// Desktop positioning with better calculations
+		const spaceBelow = window.innerHeight - rect.bottom;
+		const spaceAbove = rect.top;
+		const menuHeight = 180; // More accurate menu height
+
+		// Determine if menu should appear above or below
+		const shouldAppearAbove =
+			spaceBelow < menuHeight && spaceAbove > menuHeight;
+
 		return {
 			position: "fixed" as const,
-			top: rect.bottom + window.scrollY,
-			left: rect.right - 100,
+			top: shouldAppearAbove ? rect.top - menuHeight - 8 : rect.bottom + 8,
+			right: Math.max(8, window.innerWidth - rect.right), // Ensure it doesn't go off-screen
+			zIndex: 1000,
 		};
 	};
+
+	const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
 	return (
 		<div className='relative'>
 			<div
 				ref={buttonRef}
-				className='flex items-center space-x-2 cursor-pointer'
-				onClick={() => setMenuOpen(!menuOpen)}>
-				<div className='w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center'>
+				className='flex items-center space-x-1 sm:space-x-2 cursor-pointer hover:opacity-80 transition-opacity duration-200 p-1 rounded-lg'
+				onClick={() => setMenuOpen(!menuOpen)}
+				role='button'
+				aria-expanded={menuOpen}
+				aria-haspopup='true'
+				tabIndex={0}
+				onKeyDown={(e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						setMenuOpen(!menuOpen);
+					}
+				}}>
+				<div className='w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0'>
 					{renderAvatar()}
 				</div>
-				<span className='hidden md:block'>{user.name}</span>
+				<span className='hidden sm:block text-mainMint font-bold text-sm lg:text-base truncate max-w-24 lg:max-w-none'>
+					{user.name}
+				</span>
 			</div>
 
 			{menuOpen &&
 				createPortal(
-					<div
-						ref={menuRef}
-						className='w-28 bg-gray-800 rounded-md shadow-lg py-1 z-50 '
-						style={getMenuPosition()}>
-						<Link
-							to='/profile'
-							className='block px-4 py-2 text-sm text-white hover:text-mainMint'
-							onClick={() => setMenuOpen(false)}>
-							Mój profil
-						</Link>
-						<hr className='border-gray-700' />
-						<Link
-							to='/settings'
-							className='block px-4 py-2 text-sm text-white hover:text-mainMint'
-							onClick={() => setMenuOpen(false)}>
-							Ustawienia
-						</Link>
-						<hr className='border-gray-700' />
-						<button
-							onClick={() => {
-								setMenuOpen(false);
-								logout();
-							}}
-							className='block w-full text-left px-4 py-2 text-sm text-white hover:text-mainMint'>
-							Wyloguj się
-						</button>
-					</div>,
+					<>
+						{/* Mobile backdrop */}
+						{isMobile && (
+							<div
+								className='fixed inset-0 bg-black bg-opacity-50 z-40'
+								onClick={() => setMenuOpen(false)}
+							/>
+						)}
+
+						<div
+							ref={menuRef}
+							className={`
+                                bg-gray-800 rounded-lg shadow-xl py-2 z-50 border border-gray-600
+                                ${
+																	isMobile
+																		? "w-72 max-w-[90vw]"
+																		: "w-48 sm:w-52"
+																}
+                            `}
+							style={getMenuPosition()}
+							role='menu'
+							aria-orientation='vertical'>
+							{/* Mobile header */}
+							{isMobile && (
+								<div className='px-4 py-3 border-b border-gray-600'>
+									<div className='flex items-center space-x-3'>
+										<div className='w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center'>
+											{renderAvatar()}
+										</div>
+										<div>
+											<p className='text-white font-medium text-base'>
+												{user.name}
+											</p>
+											<p className='text-gray-400 text-sm truncate'>
+												{user.email}
+											</p>
+										</div>
+									</div>
+								</div>
+							)}
+
+							<div className={isMobile ? "py-2" : "py-1"}>
+								<Link
+									to='/profile'
+									className={`
+                                        flex items-center px-4 text-white hover:text-mainMint hover:bg-gray-700 transition-colors duration-200
+                                        ${
+																					isMobile
+																						? "py-3 text-base"
+																						: "py-2 text-sm"
+																				}
+                                    `}
+									onClick={() => setMenuOpen(false)}
+									role='menuitem'>
+									<FaUser
+										className={`${
+											isMobile ? "mr-3 text-base" : "mr-2 text-sm"
+										}`}
+									/>
+									Mój profil
+								</Link>
+
+								<hr className='border-gray-700 my-1' />
+
+								<Link
+									to='/settings'
+									className={`
+                                        flex items-center px-4 text-white hover:text-mainMint hover:bg-gray-700 transition-colors duration-200
+                                        ${
+																					isMobile
+																						? "py-3 text-base"
+																						: "py-2 text-sm"
+																				}
+                                    `}
+									onClick={() => setMenuOpen(false)}
+									role='menuitem'>
+									<FaCog
+										className={`${
+											isMobile ? "mr-3 text-base" : "mr-2 text-sm"
+										}`}
+									/>
+									Ustawienia
+								</Link>
+
+								<hr className='border-gray-700 my-1' />
+
+								<button
+									onClick={() => {
+										setMenuOpen(false);
+										logout();
+									}}
+									className={`
+                                        flex items-center w-full text-left px-4 text-white hover:text-mainMint hover:bg-gray-700 transition-colors duration-200
+                                        ${
+																					isMobile
+																						? "py-3 text-base"
+																						: "py-2 text-sm"
+																				}
+                                    `}
+									role='menuitem'>
+									<FaSignOutAlt
+										className={`${
+											isMobile ? "mr-3 text-base" : "mr-2 text-sm"
+										}`}
+									/>
+									Wyloguj się
+								</button>
+							</div>
+						</div>
+					</>,
 					document.body,
 				)}
 		</div>

@@ -24,7 +24,7 @@ interface EditorRoom extends Omit<Room, "walls" | "grid" | "door"> {
 		scaleX?: number;
 		scaleY?: number;
 		opacity?: number;
-	};
+	} | null;
 	startingPoint?: { row: number; col: number } | null;
 }
 
@@ -445,11 +445,14 @@ const editorSlice = createSlice({
 				}
 			}
 		},
+
 		updateRiddle(
 			state,
 			action: PayloadAction<{
+				roomId?: string; // Optional since we can get it from current state
 				riddleId: string;
-				updates: Partial<Riddle>;
+				riddleData?: any; // Support both riddleData and updates
+				updates?: Partial<Riddle>; // Keep backward compatibility
 			}>,
 		) {
 			const escapeRoom = state.escapeRooms.find(
@@ -461,9 +464,12 @@ const editorSlice = createSlice({
 					(r) => r.id === action.payload.riddleId,
 				);
 				if (riddleIndex !== -1) {
+					// Support both riddleData (new) and updates (old) for backward compatibility
+					const updateData =
+						action.payload.riddleData || action.payload.updates;
 					room.riddles[riddleIndex] = {
 						...room.riddles[riddleIndex],
-						...action.payload.updates,
+						...updateData,
 					};
 				}
 			}
