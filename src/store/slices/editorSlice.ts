@@ -173,13 +173,51 @@ const editorSlice = createSlice({
 				state.currentEscapeRoomId = action.payload;
 			} else {
 				const escapeRoom = action.payload;
+				console.log("Setting current escape room:", escapeRoom);
+
 				state.escapeRooms = state.escapeRooms.filter(
 					(er) => er.id !== escapeRoom.id,
 				);
-				state.escapeRooms.push(escapeRoom);
+
+				const transformedEscapeRoom = {
+					...escapeRoom,
+					rooms:
+						escapeRoom.rooms?.map((room: any) => ({
+							...room,
+							riddles: (room.riddles || []).map((riddle: any) => {
+								console.log("Processing riddle:", riddle);
+								return {
+									id: riddle.id,
+									position: {
+										row: riddle.position?.row || 0,
+										col: riddle.position?.col || 0,
+									},
+									type: riddle.type || "knowledge",
+									title: riddle.data?.title || riddle.title || "",
+									question: riddle.data?.question || riddle.question || "",
+									answer: riddle.data?.answer || riddle.answer || "",
+									hints: riddle.data?.hints || riddle.hints || [],
+									options: riddle.data?.options || riddle.options || {},
+									assetId: riddle.assetId || null,
+									texture: riddle.texture || null,
+								};
+							}),
+							props: room.props || [],
+							grid: room.grid || {},
+							walls: room.walls || {},
+							startingPoint: room.startingPoint || { row: 0, col: 0 },
+							door: room.door || { row: 0, col: 0, rotation: 0 },
+							floorAccepted: room.floorAccepted || false,
+						})) || [],
+				};
+
+				state.escapeRooms.push(transformedEscapeRoom);
 				state.currentEscapeRoomId = escapeRoom.id;
-				if (escapeRoom.rooms && escapeRoom.rooms.length > 0) {
-					state.currentRoomId = escapeRoom.rooms[0].id;
+				if (
+					transformedEscapeRoom.rooms &&
+					transformedEscapeRoom.rooms.length > 0
+				) {
+					state.currentRoomId = transformedEscapeRoom.rooms[0].id;
 				}
 			}
 		},

@@ -1,18 +1,56 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useGetMyEscapeRooms } from "../hooks/useGetMyEscapeRooms";
 import { setCurrentEscapeRoom, clearEditor } from "../store/slices/editorSlice";
+import { RootState } from "../store";
 import Editor from "../components/organisms/Editor";
 import EscapeRoomCard from "../components/atoms/EscapeRoomCard";
-import { IoAdd, IoRefresh, IoAlert, IoImage } from "react-icons/io5";
+import ConfirmationModal from "../components/molecules/ConfirmationModal";
+import {
+	IoAdd,
+	IoRefresh,
+	IoAlert,
+	IoImage,
+	IoArrowBack,
+} from "react-icons/io5";
 import { useAuthorizedApiClient } from "../utils/apiHelpers";
 
+interface EditorMode {
+	type: "view" | "create" | "edit";
+	escapeRoomId?: number;
+}
+
+interface ConfirmationState {
+	isOpen: boolean;
+	title: string;
+	message: string;
+	onConfirm: () => void;
+}
+
 const EditorPage: React.FC = () => {
-	const [escapeRoomSelected, setEscapeRoomSelected] = useState(false);
+	const [mode, setMode] = useState<EditorMode>({ type: "view" });
 	const [escapeRooms, setEscapeRooms] = useState<any[]>([]);
+	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+	const [confirmationModal, setConfirmationModal] = useState<ConfirmationState>(
+		{
+			isOpen: false,
+			title: "",
+			message: "",
+			onConfirm: () => {},
+		},
+	);
+
 	const dispatch = useDispatch();
 	const authorizedApi = useAuthorizedApiClient();
+
+	// Get current editor state to detect changes
+	const currentEscapeRoom = useSelector((state: RootState) =>
+		state.editor.escapeRooms.find(
+			(er) => er.id === state.editor.currentEscapeRoomId,
+		),
+	);
+
 	const {
 		escapeRooms: fetchedEscapeRooms,
 		loading,
@@ -26,18 +64,69 @@ const EditorPage: React.FC = () => {
 		}
 	}, [fetchedEscapeRooms]);
 
+	// Track changes to detect unsaved modifications
+	useEffect(() => {
+		if (mode.type !== "view" && currentEscapeRoom) {
+			setHasUnsavedChanges(true);
+		}
+	}, [currentEscapeRoom, mode.type]);
+
+	// Set unsaved changes when entering create mode
+	useEffect(() => {
+		if (mode.type === "create") {
+			const timer = setTimeout(() => {
+				setHasUnsavedChanges(true);
+			}, 1000);
+			return () => clearTimeout(timer);
+		}
+	}, [mode.type]);
+
 	const handleCreateNewEscapeRoom = () => {
-		// Clear the editor state for a fresh start
-		dispatch(clearEditor());
-		setEscapeRoomSelected(true);
+		if (hasUnsavedChanges) {
+			setConfirmationModal({
+				isOpen: true,
+				title: "Niezapisane zmiany",
+				message:
+					"Masz niezapisane zmiany. Czy na pewno chcesz utworzyć nowy escape room?",
+				onConfirm: () => {
+					dispatch(clearEditor());
+					setMode({ type: "create" });
+					setHasUnsavedChanges(false);
+					setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
+				},
+			});
+		} else {
+			dispatch(clearEditor());
+			setMode({ type: "create" });
+			setHasUnsavedChanges(false);
+		}
+	};
+
+	const handleBackToList = () => {
+		if (hasUnsavedChanges) {
+			setConfirmationModal({
+				isOpen: true,
+				title: "Niezapisane zmiany",
+				message:
+					"Masz niezapisane zmiany. Czy na pewno chcesz wrócić do listy?",
+				onConfirm: () => {
+					setMode({ type: "view" });
+					setHasUnsavedChanges(false);
+					dispatch(clearEditor());
+					setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
+				},
+			});
+		} else {
+			setMode({ type: "view" });
+			setHasUnsavedChanges(false);
+			dispatch(clearEditor());
+		}
 	};
 
 	const handleDeleteSuccess = async (escapeRoomId: number) => {
 		try {
 			await authorizedApi.delete(`/escape-room/${escapeRoomId}`);
-
 			setEscapeRooms((prev) => prev.filter((room) => room.id !== escapeRoomId));
-
 			console.log(`Escape room ${escapeRoomId} deleted successfully`);
 		} catch (error) {
 			console.error("Error deleting escape room:", error);
@@ -46,6 +135,23 @@ const EditorPage: React.FC = () => {
 	};
 
 	const handleEditEscapeRoom = async (escapeRoomId: number) => {
+		if (hasUnsavedChanges) {
+			setConfirmationModal({
+				isOpen: true,
+				title: "Niezapisane zmiany",
+				message:
+					"Masz niezapisane zmiany. Czy na pewno chcesz edytować inny escape room?",
+				onConfirm: async () => {
+					setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
+					await loadEscapeRoomForEdit(escapeRoomId);
+				},
+			});
+		} else {
+			await loadEscapeRoomForEdit(escapeRoomId);
+		}
+	};
+
+	const loadEscapeRoomForEdit = async (escapeRoomId: number) => {
 		try {
 			const escapeRoomData = escapeRooms.find((er) => er.id === escapeRoomId);
 
@@ -174,7 +280,8 @@ const EditorPage: React.FC = () => {
 
 			// Set the current escape room in the editor
 			dispatch(setCurrentEscapeRoom(escapeRoom));
-			setEscapeRoomSelected(true);
+			setMode({ type: "edit", escapeRoomId });
+			setHasUnsavedChanges(false);
 		} catch (error) {
 			console.error("Error loading escape room:", error);
 		}
@@ -185,10 +292,66 @@ const EditorPage: React.FC = () => {
 		console.log("Playing escape room:", escapeRoomId);
 	};
 
-	if (escapeRoomSelected) {
-		return <Editor />;
+	const handleSaveSuccess = () => {
+		setHasUnsavedChanges(false);
+		// Optionally refresh the list if we're editing
+		if (mode.type === "edit") {
+			refetch();
+		}
+	};
+
+	const handleSaveAndExit = () => {
+		// This would be called from the Editor component when save is successful
+		handleSaveSuccess();
+		setMode({ type: "view" });
+	};
+
+	// Show editor when in create or edit mode
+	if (mode.type === "create" || mode.type === "edit") {
+		return (
+			<div className='relative'>
+				{/* Back button overlay */}
+				<div className='absolute top-2 left-7 z-50'>
+					<button
+						onClick={handleBackToList}
+						className='flex items-center gap-2 bg-gray-800/90 backdrop-blur-sm hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors border border-gray-600'>
+						<IoArrowBack size={20} />
+					</button>
+				</div>
+
+				{/* Unsaved changes indicator */}
+				{hasUnsavedChanges && (
+					<div className='fixed top-4 right-4 z-50'>
+						<div className='bg-yellow-600/90 backdrop-blur-sm text-white px-3 py-1 rounded-lg text-sm border border-yellow-500'>
+							Niezapisane zmiany
+						</div>
+					</div>
+				)}
+
+				<Editor
+					mode={mode.type}
+					onSaveSuccess={handleSaveSuccess}
+					onSaveAndExit={handleSaveAndExit}
+				/>
+
+				{/* Confirmation Modal */}
+				<ConfirmationModal
+					isOpen={confirmationModal.isOpen}
+					onClose={() =>
+						setConfirmationModal((prev) => ({ ...prev, isOpen: false }))
+					}
+					onConfirm={confirmationModal.onConfirm}
+					title={confirmationModal.title}
+					message={confirmationModal.message}
+					confirmText='Tak, kontynuuj'
+					cancelText='Anuluj'
+					confirmButtonClass='bg-yellow-600 hover:bg-yellow-700'
+				/>
+			</div>
+		);
 	}
 
+	// Show list view
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-dark via-slate-800 to-dark'>
 			{/* Header with Background */}
@@ -229,7 +392,7 @@ const EditorPage: React.FC = () => {
 				</div>
 			</div>
 
-			{/* Content Section - No Background */}
+			{/* Content Section */}
 			<div className='max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 pb-16 mt-12'>
 				{/* Loading State */}
 				{loading && (
@@ -298,6 +461,20 @@ const EditorPage: React.FC = () => {
 					</div>
 				)}
 			</div>
+
+			{/* Confirmation Modal */}
+			<ConfirmationModal
+				isOpen={confirmationModal.isOpen}
+				onClose={() =>
+					setConfirmationModal((prev) => ({ ...prev, isOpen: false }))
+				}
+				onConfirm={confirmationModal.onConfirm}
+				title={confirmationModal.title}
+				message={confirmationModal.message}
+				confirmText='Tak, kontynuuj'
+				cancelText='Anuluj'
+				confirmButtonClass='bg-yellow-600 hover:bg-yellow-700'
+			/>
 		</div>
 	);
 };
