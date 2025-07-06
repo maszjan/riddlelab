@@ -3,7 +3,17 @@ import FloatingToolbar from "./Editor/FloatingToolbar";
 import RightSidebar from "./Editor/RightSidebar";
 import MainCanvasWrapper from "./Editor/MainCanvasWrapper";
 
-const Editor: React.FC = () => {
+interface EditorProps {
+	mode?: "create" | "edit";
+	onSaveSuccess?: () => void;
+	onSaveAndExit?: () => void;
+}
+
+const Editor: React.FC<EditorProps> = ({
+	mode = "create",
+	onSaveSuccess,
+	onSaveAndExit,
+}) => {
 	return (
 		<div className='flex h-screen mx- bg-gray-900 text-white relative'>
 			<div className='absolute top-0 left-0 w-auto z-50'>
@@ -17,7 +27,11 @@ const Editor: React.FC = () => {
 			</div>
 
 			<div className='w-72 bg-gray-800 border-gray-600 z-50'>
-				<RightSidebar />
+				<RightSidebar
+					mode={mode}
+					onSaveSuccess={onSaveSuccess}
+					onSaveAndExit={onSaveAndExit}
+				/>
 			</div>
 		</div>
 	);

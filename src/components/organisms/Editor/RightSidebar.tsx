@@ -34,7 +34,17 @@ import AssetPickerModal from "./AssetPickerModal";
 import useGetAsset from "../../../hooks/useGetAsset";
 import SaveEscapeRoomModal from "../EscapeRooms/SaveEscapeRoomModal";
 
-const RightSidebar = () => {
+interface RightSidebarProps {
+	mode?: "create" | "edit";
+	onSaveSuccess?: () => void;
+	onSaveAndExit?: () => void;
+}
+
+const RightSidebar: React.FC<RightSidebarProps> = ({
+	mode = "create",
+	onSaveSuccess,
+	onSaveAndExit,
+}) => {
 	const dispatch = useDispatch();
 	const selectedTool = useSelector(
 		(state: RootState) => state.editor.selectedTool,
@@ -846,13 +856,15 @@ const RightSidebar = () => {
 						/>
 
 						{/* Edit Riddle Modal - for editing existing riddles */}
-						<EditRiddleModal
-							isOpen={!!editingRiddleId}
-							onClose={() => setEditingRiddleId(null)}
-							riddle={currentRoom?.riddles?.find(
-								(r) => r.id === editingRiddleId,
-							)}
-						/>
+						{editingRiddleId && (
+							<EditRiddleModal
+								isOpen={true}
+								onClose={() => setEditingRiddleId(null)}
+								riddle={currentRoom?.riddles?.find(
+									(r) => r.id === editingRiddleId,
+								)}
+							/>
+						)}
 
 						{riddleForm.id && (
 							<div className='mb-4'>
@@ -1368,7 +1380,10 @@ const RightSidebar = () => {
 				onClose={() => setIsSaveModalOpen(false)}
 				onSuccess={() => {
 					console.log("Escape Room saved successfully!");
+					onSaveSuccess?.();
 				}}
+				onSaveAndExit={onSaveAndExit}
+				mode={mode}
 			/>
 		</>
 	);

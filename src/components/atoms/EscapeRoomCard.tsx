@@ -77,14 +77,14 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 
 	return (
 		<div
-			className={`bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-all duration-300 group cursor-pointer ${className} ${
+			className={`bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-all duration-300 group cursor-pointer flex flex-col h-full ${className} ${
 				isDeleting ? "opacity-50 pointer-events-none" : ""
 			}`}
 			onClick={
 				mode === "player" && !showEditButton ? handleCardClick : undefined
 			}>
 			{/* Thumbnail */}
-			<div className='aspect-video bg-gray-600 relative overflow-hidden'>
+			<div className='aspect-video bg-gray-600 relative flex-shrink-0'>
 				{escapeRoom.thumbnail_url ? (
 					<img
 						src={`${import.meta.env.VITE_API_URL}${escapeRoom.thumbnail_url}`}
@@ -127,15 +127,15 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 				)}
 			</div>
 
-			{/* Content */}
-			<div className='p-3 md:p-4'>
+			{/* Content - flex-grow to push buttons to bottom */}
+			<div className='p-3 md:p-4 flex flex-col flex-grow'>
 				<h3
 					className='font-semibold text-base md:text-lg mb-2 truncate text-light'
 					title={escapeRoom.name}>
 					{escapeRoom.name}
 				</h3>
 				<p
-					className='text-gray-400 text-xs md:text-sm mb-3 line-clamp-2 leading-relaxed'
+					className='text-gray-400 text-xs md:text-sm mb-3 line-clamp-2 leading-relaxed flex-grow'
 					title={escapeRoom.description}>
 					{escapeRoom.description}
 				</p>
@@ -157,13 +157,13 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 								{escapeRoom.rooms.length}{" "}
 								{escapeRoom.rooms.length === 1 ? "pokój" : "pokoi"}
 							</div>
-						)}{" "}
+						)}
 					</div>
 				)}
 
-				{/* Action buttons */}
+				{/* Action buttons - always at bottom */}
 				{(showEditButton || showPlayButton) && (
-					<div className='flex gap-2'>
+					<div className='flex gap-2 mt-auto'>
 						{showEditButton && onEdit && (
 							<button
 								onClick={(e) => {

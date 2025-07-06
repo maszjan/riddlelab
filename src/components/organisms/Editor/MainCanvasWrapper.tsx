@@ -479,8 +479,6 @@ const MainCanvasWrapper: React.FC = () => {
 				y={door.row * GRID_SIZE}
 				width={GRID_SIZE}
 				height={GRID_SIZE}
-				fill='#8B4513' // Brown color for door
-				stroke='#654321'
 				strokeWidth={2}
 				rotation={rotation}
 			/>
@@ -631,14 +629,19 @@ const MainCanvasWrapper: React.FC = () => {
 	};
 
 	return (
-		<Stage width={ROOM_WIDTH * GRID_SIZE} height={ROOM_HEIGHT * GRID_SIZE}>
-			<Layer>{renderGrid()}</Layer>
-			<Layer>{renderWalls()}</Layer>
-			<Layer>{renderDoors()}</Layer>
-			<Layer>{renderStartingPoint(user)}</Layer>
-			<Layer>{renderProps()}</Layer>
-			<Layer>{renderRiddles()}</Layer>
-		</Stage>
+		<div
+			className='main-canvas-wrapper'
+			data-canvas='main'
+			data-testid='room-editor-canvas'>
+			<Stage width={ROOM_WIDTH * GRID_SIZE} height={ROOM_HEIGHT * GRID_SIZE}>
+				<Layer>{renderGrid()}</Layer>
+				<Layer>{renderWalls()}</Layer>
+				<Layer>{renderDoors()}</Layer>
+				<Layer>{renderStartingPoint(user)}</Layer>
+				<Layer>{renderProps()}</Layer>
+				<Layer>{renderRiddles()}</Layer>
+			</Stage>
+		</div>
 	);
 };
 
