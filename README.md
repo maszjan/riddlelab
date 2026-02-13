@@ -1,54 +1,104 @@
-# React + TypeScript + Vite
+# RiddleLAB Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend aplikacji RiddleLAB
 
-Currently, two official plugins are available:
+## Wymagania
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Docker **lub** Node.js 18+
+- npm
 
-## Expanding the ESLint configuration
+## Struktura projektu
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Projekt powinien być sklonowany w strukturze:
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```
+riddlelab/
+  api/        # backend (Laravel)
+  frontend/   # frontend (to repozytorium)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Integracja z backendem
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**Uwaga:**  
+Do poprawnego działania wymagane jest uruchomienie backendu (API) z repozytorium:  
+[https://github.com/maszjan/riddlelab-api](https://github.com/maszjan/riddlelab-api)
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+**Docker Compose uruchom w katalogu `riddlelab/api`!**  
+Frontend zostanie automatycznie podniesiony jako jeden z serwisów.
+
+Postępuj zgodnie z instrukcją w README backendu, aby uruchomić API i frontend.
+
+Upewnij się, że zmienna `VITE_API_URL` w pliku `.env` wskazuje na adres API (np. `http://localhost:8080/api`).
+
+## Instalacja i uruchomienie
+
+### 1. Klonowanie repozytoriów
+
+```sh
+git clone https://github.com/maszjan/riddlelab riddlelab/frontend
+git clone https://github.com/maszjan/riddlelab-api riddlelab/api
 ```
+
+### 2. Konfiguracja środowiska
+
+Skopiuj plik `.env` lub `.env.example` i ustaw adres backendu (`VITE_API_URL`).
+
+### 3. Uruchomienie przez Docker (zalecane)
+
+Przejdź do katalogu backendu i uruchom Docker Compose:
+
+```sh
+cd ../api
+docker compose up --build
+```
+
+Aplikacja frontendowa będzie dostępna pod [http://localhost:5200](http://localhost:5200).
+
+### 4. Uruchomienie lokalnie (bez Dockera)
+
+```sh
+npm install
+npm run dev
+```
+
+## Użyte biblioteki
+
+- **konva.js** – do modułu edycji map (edytor pokoi)
+- **kaplay.js** – do obsługi modułu gry
+- **React, TypeScript, TailwindCSS, Vite** – główny stack
+
+## Ważne pliki i katalogi
+
+- `src/` – główny kod aplikacji
+- `public/` – statyczne zasoby
+- `.Dockerfile` – obraz aplikacji
+- `.env` – konfiguracja środowiska
+
+---
+
+Plik `.env.example`
+
+W repozytorium znajduje się plik `.env.example`, który zawiera przykładowe zmienne środowiskowe wymagane do uruchomienia frontendu.  
+Przed pierwszym uruchomieniem skopiuj go do `.env` i dostosuj wartości do swojego środowiska:
+
+```sh
+cp .env.example .env
+```
+
+Przykładowa zawartość `.env.example`:
+
+```
+VITE_API_URL=http://localhost:8080
+VITE_PUSHER_APP_KEY=XXXXXXXXXXXX
+VITE_PUSHER_APP_CLUSTER=eu
+VITE_ENV=development
+```
+
+**Opis zmiennych:**
+
+- `VITE_API_URL` – adres backendu (API), np. `http://localhost:8080`
+- `VITE_PUSHER_APP_KEY` – klucz aplikacji Pusher (konieczne)
+- `VITE_PUSHER_APP_CLUSTER` – klaster Pushera (zazwyczaj eu)
+- `VITE_ENV` – środowisko uruchomienia (`development` lub `production`)
+
+Pamiętaj, aby zawsze mieć poprawnie skonfigurowany plik `.env` przed uruchomieniem aplikacji!
