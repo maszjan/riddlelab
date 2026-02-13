@@ -51,7 +51,6 @@ function App() {
 						</AuthRoute>
 					),
 				},
-
 				// Protected routes
 				{
 					path: "editor",

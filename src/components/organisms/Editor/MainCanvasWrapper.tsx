@@ -7,7 +7,7 @@ import {
 	updateGrid,
 	addDoor,
 	setStartingPoint,
-	updateRiddlePosition,
+	updateRiddlePosition, 
 	updatePropPosition,
 	clearRoom,
 	updateWalls,
@@ -16,9 +16,9 @@ import { selectUser } from "../../../store/slices/userSlice";
 import AvatarKonvaElements from "../../atoms/AvatarKonvaElements";
 import useGetAsset from "../../../hooks/useGetAsset";
 
-const GRID_SIZE = 40; // Size of each grid cell
-const ROOM_WIDTH = 30; // Number of columns
-const ROOM_HEIGHT = 20; // Number of rows
+const GRID_SIZE = 40;
+const ROOM_WIDTH = 30;
+const ROOM_HEIGHT = 20;
 
 const MainCanvasWrapper: React.FC = () => {
 	const dispatch = useDispatch();
@@ -43,15 +43,14 @@ const MainCanvasWrapper: React.FC = () => {
 		);
 	});
 
-	// Add this hook to fetch door texture asset
 	const { asset: doorTextureAsset } = useGetAsset(
 		currentRoom?.doorTextureAssetId || null,
 	);
 
 	const floorTextureUrl = currentRoom?.floorTexture;
-	const wallColor = currentRoom?.wallColor || "#888888"; // Get the wall color
-	const wallThickness = currentRoom?.wallThickness || 6; // Get the wall thickness dynamically
-	const floorAccepted = currentRoom?.floorAccepted; // Check if the floor is accepted
+	const wallColor = currentRoom?.wallColor || "#888888";
+	const wallThickness = currentRoom?.wallThickness || 6;
+	const floorAccepted = currentRoom?.floorAccepted;
 
 	const [floorTexture, setFloorTexture] = useState<HTMLImageElement | null>(
 		null,
@@ -94,7 +93,6 @@ const MainCanvasWrapper: React.FC = () => {
 					const img = new Image();
 					img.src = fullUrl;
 					img.onload = () => {
-						console.log(`${textureName} texture loaded successfully:`, fullUrl);
 						setTexture(img);
 					};
 					img.onerror = (err) => {
@@ -111,18 +109,14 @@ const MainCanvasWrapper: React.FC = () => {
 			}
 		};
 
-		// Load floor texture
 		if (floorTextureUrl) {
-			console.log("Loading floor texture:", floorTextureUrl);
 			loadTexture(floorTextureUrl, setFloorTexture, "floor");
 		} else {
 			setFloorTexture(null);
 		}
 
-		// Load door texture - prioritize doorTexture, fallback to asset URL
 		const doorTextureUrl = currentRoom?.doorTexture || doorTextureAsset?.url;
 		if (doorTextureUrl) {
-			console.log("Loading door texture:", doorTextureUrl);
 			loadTexture(doorTextureUrl, setDoorTexture, "door");
 		} else {
 			setDoorTexture(null);
@@ -132,13 +126,11 @@ const MainCanvasWrapper: React.FC = () => {
 			const newPropImages: Record<string, HTMLImageElement | null> = {};
 			currentRoom.props.forEach((prop) => {
 				if (prop.imageUrl) {
-					console.log(`Loading prop texture for ${prop.id}:`, prop.imageUrl);
 					const fullUrl = getImageUrl(prop.imageUrl);
 					if (fullUrl) {
 						const img = new Image();
 						img.src = fullUrl;
 						img.onload = () => {
-							console.log(`Prop texture loaded for ${prop.id}:`, fullUrl);
 							setPropImages((prev) => ({ ...prev, [prop.id]: img }));
 						};
 						img.onerror = (err) => {
@@ -165,16 +157,11 @@ const MainCanvasWrapper: React.FC = () => {
 			const newRiddleImages: Record<string, HTMLImageElement | null> = {};
 			currentRoom.riddles.forEach((riddle) => {
 				if (riddle.texture) {
-					console.log(
-						`Loading riddle texture for ${riddle.id}:`,
-						riddle.texture,
-					);
 					const fullUrl = getImageUrl(riddle.texture);
 					if (fullUrl) {
 						const img = new Image();
 						img.src = fullUrl;
 						img.onload = () => {
-							console.log(`Riddle texture loaded for ${riddle.id}:`, fullUrl);
 							setRiddleImages((prev) => ({ ...prev, [riddle.id]: img }));
 						};
 						img.onerror = (err) => {
@@ -192,7 +179,6 @@ const MainCanvasWrapper: React.FC = () => {
 					newRiddleImages[riddle.id] = null;
 				}
 			});
-			// Clear riddles that are no longer in the room
 			setRiddleImages(newRiddleImages);
 		} else {
 			setRiddleImages({});
@@ -200,7 +186,7 @@ const MainCanvasWrapper: React.FC = () => {
 	}, [
 		floorTextureUrl,
 		currentRoom?.doorTexture,
-		doorTextureAsset?.url, // Add this dependency
+		doorTextureAsset?.url,
 		currentRoom?.props,
 		currentRoom?.riddles,
 	]);
@@ -214,7 +200,7 @@ const MainCanvasWrapper: React.FC = () => {
 					position: { row, col },
 				}),
 			);
-			return; // Exit the function early
+			return;
 		}
 
 		if (selectedProp && selectedTool === "props") {
@@ -239,14 +225,14 @@ const MainCanvasWrapper: React.FC = () => {
 				}
 				break;
 			case "door":
-				dispatch(addDoor({ row, col })); // Save door position in grid coordinates
+				dispatch(addDoor({ row, col }));
 				break;
 			case "startPoint":
-				dispatch(setStartingPoint({ row, col })); // Save starting point in grid coordinates
+				dispatch(setStartingPoint({ row, col }));
 				break;
 			case "walls":
 				if (floorAccepted) {
-					dispatch(updateWalls({ key, color: wallColor })); // Update wall color
+					dispatch(updateWalls({ key, color: wallColor }));
 				}
 				break;
 			case "clearRoom":
@@ -268,7 +254,7 @@ const MainCanvasWrapper: React.FC = () => {
 	};
 
 	const handleMouseMove = (event: any) => {
-		if (event.evt.buttons !== 1) return; // Only handle if the left mouse button is pressed
+		if (event.evt.buttons !== 1) return;
 		const stage = event.target.getStage();
 		const pointerPosition = stage.getPointerPosition();
 		if (!pointerPosition) return;
@@ -291,7 +277,6 @@ const MainCanvasWrapper: React.FC = () => {
 				const isActive = currentRoom.grid[key];
 
 				if (isActive) {
-					// Only render texture if it exists, otherwise render a simple neutral floor
 					if (floorTexture) {
 						cells.push(
 							<Rect
@@ -312,7 +297,6 @@ const MainCanvasWrapper: React.FC = () => {
 							/>,
 						);
 					} else {
-						// Simple neutral floor without color - just a light background
 						cells.push(
 							<Rect
 								key={`${key}-floor`}
@@ -320,7 +304,7 @@ const MainCanvasWrapper: React.FC = () => {
 								y={row * GRID_SIZE}
 								width={GRID_SIZE}
 								height={GRID_SIZE}
-								fill='#e8e8e8' // Light neutral gray
+								fill='#e8e8e8'
 								stroke='#555'
 								onMouseDown={handleMouseDown}
 								onMouseMove={handleMouseMove}
@@ -328,7 +312,6 @@ const MainCanvasWrapper: React.FC = () => {
 						);
 					}
 				} else {
-					// Render inactive cells
 					cells.push(
 						<Rect
 							key={key}
@@ -356,15 +339,12 @@ const MainCanvasWrapper: React.FC = () => {
 		const wallLines: React.JSX.Element[] = [];
 		const gridKeys = Object.keys(currentRoom.grid);
 
-		// Helper function to check if a cell is active
 		const isActive = (row: number, col: number) =>
 			currentRoom.grid[`${row}-${col}`];
 
-		// Iterate over all active cells and add walls around them
 		gridKeys.forEach((key) => {
 			const [row, col] = key.split("-").map(Number);
 
-			// Top wall
 			if (!isActive(row - 1, col)) {
 				wallLines.push(
 					<Line
@@ -381,7 +361,6 @@ const MainCanvasWrapper: React.FC = () => {
 				);
 			}
 
-			// Bottom wall
 			if (!isActive(row + 1, col)) {
 				wallLines.push(
 					<Line
@@ -398,7 +377,6 @@ const MainCanvasWrapper: React.FC = () => {
 				);
 			}
 
-			// Left wall
 			if (!isActive(row, col - 1)) {
 				wallLines.push(
 					<Line
@@ -415,7 +393,6 @@ const MainCanvasWrapper: React.FC = () => {
 				);
 			}
 
-			// Right wall
 			if (!isActive(row, col + 1)) {
 				wallLines.push(
 					<Line
@@ -444,7 +421,6 @@ const MainCanvasWrapper: React.FC = () => {
 		const door = currentRoom.door;
 		const rotation = door.rotation || 0;
 
-		// If we have a door texture, render it
 		if (doorTexture) {
 			return (
 				<Rect
@@ -471,7 +447,6 @@ const MainCanvasWrapper: React.FC = () => {
 			);
 		}
 
-		// Fallback: render a simple colored door
 		return (
 			<Rect
 				key='door-fallback'
@@ -492,7 +467,6 @@ const MainCanvasWrapper: React.FC = () => {
 
 		const { row, col } = currentRoom.startingPoint;
 
-		// Get user avatar colors from Redux or props
 		let avatarColors = {
 			skin_color: "#FDBCB4",
 			hair_color: "#8B4513",
@@ -500,7 +474,6 @@ const MainCanvasWrapper: React.FC = () => {
 			outfit_color: "#FF6B6B",
 		};
 
-		// Try to get user's actual avatar configuration
 		if (user?.player_configuration) {
 			try {
 				if (typeof user.player_configuration === "string") {
@@ -510,7 +483,6 @@ const MainCanvasWrapper: React.FC = () => {
 				}
 			} catch (e) {
 				console.error("Error parsing avatar configuration:", e);
-				// Use default colors
 			}
 		}
 
@@ -537,38 +509,33 @@ const MainCanvasWrapper: React.FC = () => {
 				return null;
 			}
 
-			// Calculate transformations for the IMAGE PATTERN only
 			const imageScaleX =
 				(GRID_SIZE / propImage.width) * (prop.flipHorizontal ? -1 : 1);
 			const imageScaleY =
 				(GRID_SIZE / propImage.height) * (prop.flipVertical ? -1 : 1);
 			const rotation = prop.rotation || 0;
 
-			// Calculate pattern offset for flipped images
 			const patternOffsetX = prop.flipHorizontal ? propImage.width : 0;
 			const patternOffsetY = prop.flipVertical ? propImage.height : 0;
 
 			return (
 				<Rect
 					key={prop.id}
-					x={prop.position.col * GRID_SIZE} // Keep position unchanged
-					y={prop.position.row * GRID_SIZE} // Keep position unchanged
+					x={prop.position.col * GRID_SIZE}
+					y={prop.position.row * GRID_SIZE}
 					width={GRID_SIZE}
 					height={GRID_SIZE}
 					fillPatternImage={propImage}
 					fillPatternScale={{
-						x: imageScaleX, // Apply reflection to image scale only
-						y: imageScaleY, // Apply reflection to image scale only
+						x: imageScaleX,
+						y: imageScaleY,
 					}}
 					fillPatternOffset={{
-						x: patternOffsetX, // Offset pattern for proper reflection
-						y: patternOffsetY, // Offset pattern for proper reflection
+						x: patternOffsetX,
+						y: patternOffsetY,
 					}}
-					fillPatternRotation={rotation} // Apply rotation to image only
-					stroke={
-						isSelected ? "#FF9900" : prop.hasCollider ? "green" : "transparent"
-					}
-					strokeWidth={isSelected ? 3 : prop.hasCollider ? 2 : 0}
+					fillPatternRotation={rotation}
+					strokeWidth={isSelected ? 3 : 0}
 				/>
 			);
 		});

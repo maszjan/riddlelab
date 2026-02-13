@@ -37,8 +37,8 @@ const Navbar: React.FC = () => {
 	};
 
 	return (
-		<nav className='w-full bg-dark shadow-lg border-b border-gray-600'>
-			<div className='max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 py-3 flex justify-between items-center'>
+		<nav className='w-full shadow-lg'>
+			<div className='mx-auto px-4  py-3 flex justify-between items-center'>
 				{/* Logo */}
 				<div className='flex items-center'>
 					<Link
@@ -96,12 +96,12 @@ const Navbar: React.FC = () => {
 									Zaloguj się
 								</button>
 							</Link>
-							<Link to='/register'>
+							{/* <Link to='/register'>
 								<button className='flex items-center px-3 lg:px-4 py-2 text-sm lg:text-base font-medium rounded-lg bg-mainMint text-dark hover:bg-mainMint/90 transition-all duration-200 shadow-sm'>
 									<FaUserPlus className='mr-1.5 lg:mr-2 text-xs lg:text-sm' />
 									Rejestracja
 								</button>
-							</Link>
+							</Link> */}
 						</>
 					)}
 				</div>

@@ -28,7 +28,6 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 			name: "",
 			type: "door",
 			image: null as File | null,
-			has_collider: false,
 		},
 		validationSchema: Yup.object({
 			name: Yup.string().required("Nazwa jest wymagana"),
@@ -36,14 +35,9 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 				.required("Typ jest wymagany")
 				.oneOf(["door", "floor", "prop", "riddle"]),
 			image: Yup.mixed().required("Obraz jest wymagany"),
-			has_collider: Yup.boolean().when("type", {
-				is: "prop",
-				then: () => Yup.boolean(),
-				otherwise: () => Yup.boolean().strip(),
-			}),
 		}),
-		validateOnMount: false, // Don't validate on mount
-		validateOnChange: false, // Only validate on blur and submit
+		validateOnMount: false,
+		validateOnChange: false,
 		validateOnBlur: true,
 		onSubmit: async (values, { resetForm, setErrors }) => {
 			try {
@@ -54,10 +48,6 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 				formData.append("type", values.type);
 				if (values.image) {
 					formData.append("image", values.image);
-				}
-
-				if (values.type === "prop") {
-					formData.append("has_collider", values.has_collider.toString());
 				}
 
 				await authorizedClient.post("/asset", formData, {
@@ -238,22 +228,6 @@ const CreateAssetModal: React.FC<CreateAssetModalProps> = ({
 							</div>
 						) : null}
 					</div>
-
-					{formik.values.type === "prop" && (
-						<div className='mb-6 flex items-center p-3 bg-gray-700 rounded-md'>
-							<input
-								id='has_collider'
-								name='has_collider'
-								type='checkbox'
-								onChange={formik.handleChange}
-								checked={formik.values.has_collider}
-								className='mr-3 w-4 h-4 text-mainMint bg-gray-600 border-gray-500 rounded focus:ring-mainMint focus:ring-2'
-							/>
-							<label htmlFor='has_collider' className='text-sm text-gray-300'>
-								Posiada kolizję (blokuje ruch gracza)
-							</label>
-						</div>
-					)}
 
 					<div className='flex justify-end space-x-3'>
 						<button

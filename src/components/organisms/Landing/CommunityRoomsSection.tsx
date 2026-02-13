@@ -8,7 +8,6 @@ import { useGetEscapeRooms } from "../../../hooks/useGetEscapeRooms";
 const CommunityRoomsSection: React.FC = () => {
 	const { escapeRooms, loading, error } = useGetEscapeRooms();
 
-	// Ensure escapeRooms is an array before slicing
 	const displayRooms = Array.isArray(escapeRooms)
 		? escapeRooms.slice(0, 3)
 		: [];

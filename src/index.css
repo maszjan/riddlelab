@@ -7,3 +7,43 @@
 		@apply bg-gray-800 min-h-screen overflow-x-hidden;
 	}
 }
+
+.custom-loading-screen {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 100vw;
+	height: 100vh;
+	background: #10151a;
+	z-index: 9999;
+	position: fixed;
+	inset: 0;
+}
+
+.custom-loading-logo-wrapper {
+	margin-bottom: 24px;
+}
+
+.custom-loading-logo {
+	display: block;
+}
+
+.custom-loading-spinner {
+	transform-origin: 50% 50%;
+	animation: custom-spin 1.2s linear infinite;
+}
+
+@keyframes custom-spin {
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.custom-loading-text {
+	color: #00ffc2;
+	font-size: 1.25rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-shadow: 0 2px 8px #000a;
+}

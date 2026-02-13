@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import { IoPlay, IoCreate, IoTime, IoTrash } from "react-icons/io5";
+import { useNavigate } from "react-router-dom";
+import emptyThumbnail from "/empty-thumbnail.png";
 
 interface EscapeRoomCardProps {
 	escapeRoom: {
@@ -14,7 +16,7 @@ interface EscapeRoomCardProps {
 	};
 	mode?: "editor" | "player";
 	onEdit?: (id: number) => void;
-	onPlay?: (id: number) => void;
+	onPlay?: (id: number, name: string) => void;
 	onDelete?: (id: number) => void;
 	showEditButton?: boolean;
 	showPlayButton?: boolean;
@@ -36,6 +38,7 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 	className = "",
 }) => {
 	const [isDeleting, setIsDeleting] = useState(false);
+	const navigate = useNavigate();
 
 	const formatDate = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString("pl-PL", {
@@ -48,8 +51,26 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 	};
 
 	const handleCardClick = () => {
-		if (mode === "player" && !showEditButton && onPlay) {
-			onPlay(escapeRoom.id);
+		if (mode === "player" && !showEditButton) {
+			handlePlay();
+		}
+	};
+
+	const handlePlay = (e?: React.MouseEvent) => {
+		if (e) e.stopPropagation();
+
+		const roomNameSlug = escapeRoom.name.toLowerCase().replace(/\s+/g, "-");
+		navigate(`/play/${roomNameSlug}`, {
+			state: {
+				escapeRoomId: escapeRoom.id,
+				escapeRoomName: escapeRoom.name,
+				description: escapeRoom.description,
+				thumbnailUrl: escapeRoom.thumbnail_url,
+			},
+		});
+
+		if (onPlay) {
+			onPlay(escapeRoom.id, escapeRoom.name);
 		}
 	};
 
@@ -77,14 +98,14 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 
 	return (
 		<div
-			className={`bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-all duration-300 group cursor-pointer flex flex-col h-full ${className} ${
+			className={`bg-gray-700 rounded-lg hover:bg-gray-650 transition-all duration-300 group cursor-pointer flex flex-col h-full ${className} ${
 				isDeleting ? "opacity-50 pointer-events-none" : ""
 			}`}
 			onClick={
 				mode === "player" && !showEditButton ? handleCardClick : undefined
 			}>
 			{/* Thumbnail */}
-			<div className='aspect-video bg-gray-600 relative flex-shrink-0'>
+			<div className='h-32 bg-gray-600 relative flex-shrink-0 rounded-t-lg overflow-hidden'>
 				{escapeRoom.thumbnail_url ? (
 					<img
 						src={`${import.meta.env.VITE_API_URL}${escapeRoom.thumbnail_url}`}
@@ -92,21 +113,18 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 						className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
 					/>
 				) : (
-					<div className='w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900'>
-						<span className='text-gray-400 text-sm md:text-base'>
-							Podgląd pokoju
-						</span>
-					</div>
+					<img
+						src={emptyThumbnail}
+						alt={escapeRoom.name}
+						className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
+					/>
 				)}
 
 				{/* Play button overlay */}
-				{showEditButton && showPlayButton && onPlay && (
+				{showEditButton && showPlayButton && (
 					<div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100'>
 						<button
-							onClick={(e) => {
-								e.stopPropagation();
-								onPlay(escapeRoom.id);
-							}}
+							onClick={handlePlay}
 							className='bg-mainMint hover:bg-mainMint/80 text-gray-900 p-3 rounded-full transform scale-75 group-hover:scale-100 transition-transform duration-300'>
 							<IoPlay size={24} />
 						</button>
@@ -178,12 +196,9 @@ const EscapeRoomCard: React.FC<EscapeRoomCardProps> = ({
 								<span className='sm:hidden'>Edit</span>
 							</button>
 						)}
-						{showPlayButton && onPlay && (
+						{showPlayButton && (
 							<button
-								onClick={(e) => {
-									e.stopPropagation();
-									onPlay(escapeRoom.id);
-								}}
+								onClick={handlePlay}
 								className={`${
 									showEditButton ? "flex-1" : "w-full"
 								} bg-mainMint hover:bg-mainMint/80 text-gray-900 px-3 py-2 rounded text-xs md:text-sm font-medium transition-colors flex items-center justify-center gap-1`}>

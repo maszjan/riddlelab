@@ -17,7 +17,6 @@ const AvatarPreview: React.FC<AvatarPreviewProps> = ({
 	colors,
 	size = "large",
 }) => {
-	// Wymiary w zależności od rozmiaru
 	const dimensions =
 		size === "small"
 			? { width: 40, height: 40, scale: 0.4 }

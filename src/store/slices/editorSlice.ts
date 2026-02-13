@@ -173,7 +173,6 @@ const editorSlice = createSlice({
 				state.currentEscapeRoomId = action.payload;
 			} else {
 				const escapeRoom = action.payload;
-				console.log("Setting current escape room:", escapeRoom);
 
 				state.escapeRooms = state.escapeRooms.filter(
 					(er) => er.id !== escapeRoom.id,
@@ -185,15 +184,14 @@ const editorSlice = createSlice({
 						escapeRoom.rooms?.map((room: any) => ({
 							...room,
 							riddles: (room.riddles || []).map((riddle: any) => {
-								console.log("Processing riddle:", riddle);
 								return {
 									id: riddle.id,
 									position: {
 										row: riddle.position?.row || 0,
 										col: riddle.position?.col || 0,
 									},
-									type: riddle.type || "knowledge",
-									title: riddle.data?.title || riddle.title || "",
+									type: riddle.type,
+									title: riddle.data?.title || riddle.tixtle || "",
 									question: riddle.data?.question || riddle.question || "",
 									answer: riddle.data?.answer || riddle.answer || "",
 									hints: riddle.data?.hints || riddle.hints || [],
@@ -422,7 +420,6 @@ const editorSlice = createSlice({
 					assetId: number | null;
 					position: { row: number; col: number };
 					rotation: number;
-					hasCollider: boolean;
 					flipHorizontal?: boolean;
 					flipVertical?: boolean;
 				};

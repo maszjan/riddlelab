@@ -1,4 +1,4 @@
-import { useState } from "react"; // Removed React import since it's not used
+import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -21,19 +21,17 @@ interface RiddleForm {
 	type: RiddleType;
 	question: string;
 	answer: string;
-	hints: string[]; // Fixed: explicit string[] instead of never[]
+	hints: string[];
 }
 
 const AddRiddleModal: React.FC<AddRiddleModalProps> = ({ isOpen, onClose }) => {
-	// Fixed: added proper types
 	const dispatch = useDispatch();
 	const [form, setForm] = useState<RiddleForm>({
-		// Fixed: added explicit type
 		title: "",
 		type: RIDDLE_TYPES.KNOWLEDGE,
 		question: "",
 		answer: "",
-		hints: [] as string[], // Fixed: explicit string[] type
+		hints: [],
 	});
 	const [newHint, setNewHint] = useState("");
 	const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
@@ -55,23 +53,27 @@ const AddRiddleModal: React.FC<AddRiddleModalProps> = ({ isOpen, onClose }) => {
 	};
 
 	const handleSubmit = () => {
-		if (
-			form.title.trim() &&
-			form.question.trim() &&
-			form.answer.trim() &&
-			selectedAssetId &&
-			selectedAssetDetails?.url
-		) {
-			const texturePath = new URL(selectedAssetDetails.url).pathname;
+		const isPuzzle = form.type === RIDDLE_TYPES.PUZZLE_GAME;
+		const canSubmit =
+			(isPuzzle && selectedAssetId && selectedAssetDetails?.url) ||
+			(!isPuzzle &&
+				form.title.trim() &&
+				form.question.trim() &&
+				form.answer.trim() &&
+				selectedAssetId &&
+				selectedAssetDetails?.url);
+
+		if (canSubmit) {
+			const texturePath = new URL(selectedAssetDetails!.url).pathname;
 			dispatch(
 				addRiddle({
 					id: `riddle-${uuidv4()}`,
 					position: { row: 0, col: 0 },
 					type: form.type,
-					title: form.title,
-					question: form.question,
-					answer: form.answer,
-					hints: form.hints,
+					title: isPuzzle ? "Puzzle minigra" : form.title,
+					question: isPuzzle ? "Rozwiąż minigrę typu puzzle" : form.question,
+					answer: isPuzzle ? "puzzle" : form.answer,
+					hints: isPuzzle ? [] : form.hints,
 					options: {},
 					assetId: selectedAssetId,
 					texture: texturePath,
@@ -83,7 +85,7 @@ const AddRiddleModal: React.FC<AddRiddleModalProps> = ({ isOpen, onClose }) => {
 				type: RIDDLE_TYPES.KNOWLEDGE,
 				question: "",
 				answer: "",
-				hints: [] as string[], // Fixed: explicit string[] type
+				hints: [],
 			});
 			setSelectedAssetId(null);
 			setNewHint("");
@@ -102,29 +104,30 @@ const AddRiddleModal: React.FC<AddRiddleModalProps> = ({ isOpen, onClose }) => {
 				</button>
 				<h3 className='text-lg font-bold text-white mb-4'>Dodaj zagadkę</h3>
 
-				<input
-					type='text'
-					value={form.title}
-					onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-					placeholder='Tytuł zagadki'
-					className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'
-				/>
-
+				{/* Najpierw typ, potem tytuł */}
 				<select
 					value={form.type}
 					onChange={(e) =>
 						setForm((f) => ({ ...f, type: e.target.value as RiddleType }))
-					} // Fixed: added type assertion
+					}
 					className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'>
 					{Object.entries(RIDDLE_TYPE_LABELS).map(([value, label]) => (
-						<option
-							key={value}
-							value={value}
-							disabled={value === RIDDLE_TYPES.PUZZLE_GAME}>
+						<option key={value} value={value}>
 							{label}
 						</option>
 					))}
 				</select>
+
+				{/* Tytuł tylko jeśli nie puzzle */}
+				{form.type !== RIDDLE_TYPES.PUZZLE_GAME && (
+					<input
+						type='text'
+						value={form.title}
+						onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+						placeholder='Tytuł zagadki'
+						className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'
+					/>
+				)}
 
 				<div className='flex items-center justify-between mb-2'>
 					<label className='text-lg mt-1 text-gray-300'>Obraz zagadki:</label>
@@ -152,58 +155,79 @@ const AddRiddleModal: React.FC<AddRiddleModalProps> = ({ isOpen, onClose }) => {
 					</div>
 				)}
 
-				<textarea
-					value={form.question}
-					onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))}
-					placeholder='Treść zagadki'
-					className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm h-20 mb-2'
-				/>
+				{/* Treść i podpowiedzi tylko jeśli nie puzzle */}
+				{form.type !== RIDDLE_TYPES.PUZZLE_GAME && (
+					<>
+						<textarea
+							value={form.question}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, question: e.target.value }))
+							}
+							placeholder='Treść zagadki'
+							className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm h-20 mb-2'
+						/>
 
-				<input
-					type='text'
-					value={form.answer}
-					onChange={(e) => setForm((f) => ({ ...f, answer: e.target.value }))}
-					placeholder='Odpowiedź'
-					className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'
-				/>
-
-				<div className='mb-2'>
-					<label className='text-xs text-gray-300 block mb-1'>
-						Podpowiedzi:
-					</label>
-					{form.hints.map((hint, idx) => (
-						<div key={idx} className='flex justify-between items-center mb-1'>
-							<span className='text-xs text-gray-300'>{hint}</span>
-							<button
-								onClick={() => handleRemoveHint(idx)}
-								className='text-red-500 text-xs'>
-								Usuń
-							</button>
-						</div>
-					))}
-					<div className='flex'>
 						<input
 							type='text'
-							value={newHint}
-							onChange={(e) => setNewHint(e.target.value)}
-							placeholder='Nowa podpowiedź'
-							className='flex-grow px-2 py-1 bg-gray-700 text-white rounded-l text-sm'
+							value={form.answer}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, answer: e.target.value }))
+							}
+							placeholder='Odpowiedź'
+							className='w-full px-2 py-1 bg-gray-700 text-white rounded text-sm mb-2'
 						/>
-						<button
-							onClick={handleAddHint}
-							className='px-2 py-1 bg-mainMint text-gray-700 rounded-r'>
-							Dodaj
-						</button>
+
+						<div className='mb-2'>
+							<label className='text-xs text-gray-300 block mb-1'>
+								Podpowiedzi:
+							</label>
+							{form.hints.map((hint, idx) => (
+								<div
+									key={idx}
+									className='flex justify-between items-center mb-1'>
+									<span className='text-xs text-gray-300'>{hint}</span>
+									<button
+										onClick={() => handleRemoveHint(idx)}
+										className='text-red-500 text-xs'>
+										Usuń
+									</button>
+								</div>
+							))}
+							<div className='flex'>
+								<input
+									type='text'
+									value={newHint}
+									onChange={(e) => setNewHint(e.target.value)}
+									placeholder='Nowa podpowiedź'
+									className='flex-grow px-2 py-1 bg-gray-700 text-white rounded-l text-sm'
+								/>
+								<button
+									onClick={handleAddHint}
+									className='px-2 py-1 bg-mainMint text-gray-700 rounded-r'>
+									Dodaj
+								</button>
+							</div>
+						</div>
+					</>
+				)}
+
+				{/* Info dla puzzle */}
+				{form.type === RIDDLE_TYPES.PUZZLE_GAME && (
+					<div className='mb-2'>
+						<p className='text-gray-400 text-sm italic'>
+							To będzie minigra typu puzzle. Po dodaniu możesz ją skonfigurować.
+						</p>
 					</div>
-				</div>
+				)}
 
 				<button
 					onClick={handleSubmit}
 					className='w-full py-2 bg-mainMint text-gray-700 rounded mt-2'
 					disabled={
-						!form.title.trim() ||
-						!form.question.trim() ||
-						!form.answer.trim() ||
+						(form.type !== RIDDLE_TYPES.PUZZLE_GAME &&
+							(!form.title.trim() ||
+								!form.question.trim() ||
+								!form.answer.trim())) ||
 						!selectedAssetId
 					}>
 					Dodaj zagadkę
