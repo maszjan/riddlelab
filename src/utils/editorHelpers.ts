@@ -27,10 +27,6 @@ export const isBorderClosed = (grid: Record<string, boolean>): boolean => {
 		fullGrid[row - minRow + 1][col - minCol + 1] = true;
 	});
 
-	console.log(
-		`isBorderClosed: Created full grid representation with dimensions ${rows}x${cols}`,
-	);
-
 	const visited: boolean[][] = Array(rows)
 		.fill(0)
 		.map(() => Array(cols).fill(false));
@@ -110,16 +106,11 @@ export const isBorderClosed = (grid: Record<string, boolean>): boolean => {
 };
 
 export const isGridFilled = (grid: Record<string, boolean>): boolean => {
-	console.log("isGridFilled: Starting check");
-
 	if (!grid || Object.keys(grid).length === 0) {
-		console.log("isGridFilled: Grid is empty or undefined.");
 		return false;
 	}
 
-	// If the border isn't closed, the grid can't be filled
 	if (!isBorderClosed(grid)) {
-		console.log("isGridFilled: Border is not closed, grid cannot be filled.");
 		return false;
 	}
 
@@ -194,17 +185,10 @@ export const isGridFilled = (grid: Record<string, boolean>): boolean => {
 		for (let c = 1; c < cols - 1; c++) {
 			// If a cell is not active and not visited (from outside), it's an unfilled cell inside the border
 			if (!fullGrid[r][c] && !visited[r][c]) {
-				console.log(
-					`isGridFilled: Found unfilled cell at (${r + minRow - 1},${
-						c + minCol - 1
-					})`,
-				);
 				return false;
 			}
 		}
 	}
-
-	console.log("isGridFilled: All cells within the border are filled.");
 	return true;
 };
 
@@ -239,7 +223,6 @@ export const fillGrid = (
 			const key = `${r}-${c}`;
 			if (!newGrid[key]) {
 				newGrid[key] = true;
-				console.log(`fillGrid: Filled cell at (${r},${c})`);
 			}
 		}
 	}
@@ -258,12 +241,6 @@ export const isDoorValid = (
 	// Check if the door is placed on an active grid cell
 	const isOnGrid = Boolean(grid[key]);
 
-	console.log(
-		`isDoorValid: Door at (${door.row},${door.col}) is ${
-			isOnGrid ? "valid" : "invalid"
-		}`,
-	);
-
 	return isOnGrid;
 };
 
@@ -277,12 +254,6 @@ export const isStartingPointValid = (
 
 	// Check if the starting point is placed on an active grid cell
 	const isOnGrid = Boolean(grid[key]);
-
-	console.log(
-		`isStartingPointValid: Starting point at (${startingPoint.row},${
-			startingPoint.col
-		}) is ${isOnGrid ? "valid" : "invalid"}`,
-	);
 
 	return isOnGrid;
 };
@@ -312,10 +283,6 @@ export const areRoomElementsValid = (room: {
 		areRiddlesValid &&
 		arePropsValid;
 
-	console.log(
-		`areRoomElementsValid: Room elements validation result: ${isValid}`,
-	);
-
 	return isValid;
 };
 
@@ -328,12 +295,10 @@ export const suggestValidPosition = (
 	for (const key of Object.keys(grid)) {
 		if (grid[key]) {
 			const [row, col] = key.split("-").map(Number);
-			console.log(`suggestValidPosition: Suggested position (${row},${col})`);
 			return { row, col };
 		}
 	}
 
-	console.log("suggestValidPosition: No valid position found");
 	return null;
 };
 
@@ -345,14 +310,7 @@ export const isRiddleValid = (
 
 	const key = `${riddle.row}-${riddle.col}`;
 
-	// Check if the riddle is placed on an active grid cell
 	const isOnGrid = Boolean(grid[key]);
-
-	console.log(
-		`isRiddleValid: Riddle at (${riddle.row},${riddle.col}) is ${
-			isOnGrid ? "valid" : "invalid"
-		}`,
-	);
 
 	return isOnGrid;
 };
@@ -365,14 +323,7 @@ export const isPropValid = (
 
 	const key = `${prop.row}-${prop.col}`;
 
-	// Check if the prop is placed on an active grid cell
 	const isOnGrid = Boolean(grid[key]);
-
-	console.log(
-		`isPropValid: Prop at (${prop.row},${prop.col}) is ${
-			isOnGrid ? "valid" : "invalid"
-		}`,
-	);
 
 	return isOnGrid;
 };

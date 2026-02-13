@@ -156,15 +156,6 @@ const LoginForm = () => {
 					) : null}
 				</div>
 
-				{/* Forgot Password Link */}
-				<div className='text-right'>
-					<a
-						href='#'
-						className='text-xs sm:text-sm text-gray-400 hover:text-mainMint transition-colors duration-200'>
-						Zapomniałeś hasła?
-					</a>
-				</div>
-
 				{/* Submit Button */}
 				<button
 					type='submit'

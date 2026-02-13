@@ -16,15 +16,32 @@ interface EscapeRoomListItem {
 	user?: any;
 }
 
+interface PaginationInfo {
+	currentPage: number;
+	lastPage: number;
+	perPage: number;
+	total: number;
+}
+
 interface UseGetEscapeRoomsReturn {
 	escapeRooms: EscapeRoomListItem[];
+	pagination: PaginationInfo;
 	loading: boolean;
 	error: string | null;
 	refetch: () => void;
 }
 
-export const useGetEscapeRooms = (): UseGetEscapeRoomsReturn => {
+export const useGetEscapeRooms = (
+	page: number = 1,
+	perPage: number = 6,
+): UseGetEscapeRoomsReturn => {
 	const [escapeRooms, setEscapeRooms] = useState<EscapeRoomListItem[]>([]);
+	const [pagination, setPagination] = useState<PaginationInfo>({
+		currentPage: 1,
+		lastPage: 1,
+		perPage: 8,
+		total: 0,
+	});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -33,14 +50,20 @@ export const useGetEscapeRooms = (): UseGetEscapeRoomsReturn => {
 			setLoading(true);
 			setError(null);
 
-			// Using apiClient instead of authorizedClient for public access
-			const response = await apiClient.get("/escape-room");
+			const response = await apiClient.get(
+				`/escape-room?page=${page}&per_page=${perPage}`,
+			);
 
-			// Extract the data from the paginated response
 			const responseData = response.data;
 			const escapeRoomsData = responseData?.data || [];
 
 			setEscapeRooms(escapeRoomsData);
+			setPagination({
+				currentPage: responseData.current_page || 1,
+				lastPage: responseData.last_page || 1,
+				perPage: responseData.per_page || 6,
+				total: responseData.total || 0,
+			});
 		} catch (err: any) {
 			console.error("Error fetching escape rooms:", err);
 			setError(
@@ -53,10 +76,11 @@ export const useGetEscapeRooms = (): UseGetEscapeRoomsReturn => {
 
 	useEffect(() => {
 		fetchEscapeRooms();
-	}, []);
+	}, [page, perPage]);
 
 	return {
 		escapeRooms,
+		pagination,
 		loading,
 		error,
 		refetch: fetchEscapeRooms,

@@ -7,6 +7,7 @@ import { RootState } from "../store";
 import Editor from "../components/organisms/Editor";
 import EscapeRoomCard from "../components/atoms/EscapeRoomCard";
 import ConfirmationModal from "../components/molecules/ConfirmationModal";
+import Pagination from "../components/atoms/Pagination";
 import {
 	IoAdd,
 	IoRefresh,
@@ -44,19 +45,20 @@ const EditorPage: React.FC = () => {
 	const dispatch = useDispatch();
 	const authorizedApi = useAuthorizedApiClient();
 
-	// Get current editor state to detect changes
 	const currentEscapeRoom = useSelector((state: RootState) =>
 		state.editor.escapeRooms.find(
 			(er) => er.id === state.editor.currentEscapeRoomId,
 		),
 	);
 
+	const [page, setPage] = useState(1);
 	const {
 		escapeRooms: fetchedEscapeRooms,
+		pagination,
 		loading,
 		error,
 		refetch,
-	} = useGetMyEscapeRooms();
+	} = useGetMyEscapeRooms(page, 8);
 
 	useEffect(() => {
 		if (fetchedEscapeRooms) {
@@ -64,14 +66,12 @@ const EditorPage: React.FC = () => {
 		}
 	}, [fetchedEscapeRooms]);
 
-	// Track changes to detect unsaved modifications
 	useEffect(() => {
 		if (mode.type !== "view" && currentEscapeRoom) {
 			setHasUnsavedChanges(true);
 		}
 	}, [currentEscapeRoom, mode.type]);
 
-	// Set unsaved changes when entering create mode
 	useEffect(() => {
 		if (mode.type === "create") {
 			const timer = setTimeout(() => {
@@ -127,7 +127,6 @@ const EditorPage: React.FC = () => {
 		try {
 			await authorizedApi.delete(`/escape-room/${escapeRoomId}`);
 			setEscapeRooms((prev) => prev.filter((room) => room.id !== escapeRoomId));
-			console.log(`Escape room ${escapeRoomId} deleted successfully`);
 		} catch (error) {
 			console.error("Error deleting escape room:", error);
 			throw error;
@@ -160,39 +159,27 @@ const EditorPage: React.FC = () => {
 				return;
 			}
 
-			// Clear editor state first
 			dispatch(clearEditor());
 
-			// Helper function to construct full URL
 			const getFullUrl = (path: string | null): string | null => {
 				if (!path) return null;
 				if (path.startsWith("http")) return path;
 
-				// Handle paths that already start with /storage/
 				if (path.startsWith("/storage/")) {
 					return `${import.meta.env.VITE_API_URL}${path}`;
-				}
-				// Handle relative paths from textures/ - add /storage/ prefix
-				else if (path.startsWith("textures/")) {
+				} else if (path.startsWith("textures/")) {
 					return `${import.meta.env.VITE_API_URL}/storage/${path}`;
-				}
-				// Handle other paths that start with /
-				else if (path.startsWith("/")) {
+				} else if (path.startsWith("/")) {
 					return `${import.meta.env.VITE_API_URL}${path}`;
-				}
-				// Handle any other relative paths
-				else {
+				} else {
 					return `${import.meta.env.VITE_API_URL}/storage/${path}`;
 				}
 			};
 
-			// Transform the API room data to match editor format
 			const transformedRooms = (escapeRoomData.rooms || []).map((room: any) => {
-				// Convert grid values from strings to booleans
 				const transformedGrid: Record<string, boolean> = {};
 				if (room.grid && typeof room.grid === "object") {
 					Object.keys(room.grid).forEach((key) => {
-						// Convert string '1' to boolean true, anything else to false
 						transformedGrid[key] =
 							room.grid[key] === "1" ||
 							room.grid[key] === 1 ||
@@ -200,12 +187,10 @@ const EditorPage: React.FC = () => {
 					});
 				}
 
-				// Transform walls data - exclude wallColor property that shouldn't be in grid coordinates
 				const transformedWalls: Record<string, string> = {};
 				if (room.walls && typeof room.walls === "object") {
 					Object.keys(room.walls).forEach((key) => {
 						if (key !== "wallColor") {
-							// Skip the wallColor property
 							transformedWalls[key] = room.walls[key];
 						}
 					});
@@ -214,28 +199,18 @@ const EditorPage: React.FC = () => {
 				return {
 					id: room.id.toString() || `room-${Date.now()}`,
 					escapeRoomId: `escape-room-${escapeRoomId}`,
-					// Use transformed grid with boolean values
 					grid: transformedGrid,
-					// Use transformed walls
 					walls: transformedWalls,
-					// Floor color - use the camelCase version or fallback to snake_case
 					floorColor: room.floorColor || room.floor_color || "#ffffff",
-					// Wall color - use the camelCase version or fallback to snake_case
 					wallColor: room.wallColor || room.wall_color || "#888888",
-					// Wall thickness - use the camelCase version or fallback to snake_case
 					wallThickness: room.wallThickness || room.wall_thickness || 20,
-					// Floor texture - construct full URL if relative path
 					floorTexture: getFullUrl(room.floorTexture || room.floor_texture),
-					// Floor texture asset ID
 					floorTextureAssetId:
 						room.floorTextureAssetId || room.floor_texture_id || null,
-					// Door - it's already an object in your data
 					door: room.door || null,
-					// Door texture - construct full URL if relative path
 					doorTexture: getFullUrl(room.doorTexture || room.door_texture),
 					doorTextureAssetId:
 						room.doorTextureAssetId || room.door_texture_asset_id || null,
-					// Starting point - it's already an object in your data
 					startingPoint:
 						room.startingPoint ||
 						(room.starting_point_row !== undefined &&
@@ -243,25 +218,23 @@ const EditorPage: React.FC = () => {
 							? {
 									row: room.starting_point_row,
 									col: room.starting_point_col,
-							  }
+								}
 							: null),
-					// Riddles - transform texture URLs
+
 					riddles: (room.riddles || []).map((riddle: any) => ({
 						...riddle,
 						texture: getFullUrl(riddle.texture),
 					})),
-					// Props - transform image URLs
+
 					props: (room.props || []).map((prop: any) => ({
 						...prop,
 						imageUrl: getFullUrl(prop.imageUrl || prop.image_url),
 					})),
 
-					// Floor accepted
 					floorAccepted: room.floorAccepted || room.floor_accepted || false,
 				};
 			});
 
-			// Create the escape room structure for the editor
 			const escapeRoom = {
 				id: `escape-room-${escapeRoomId}`,
 				name: escapeRoomData.name,
@@ -276,9 +249,6 @@ const EditorPage: React.FC = () => {
 				rooms: transformedRooms,
 			};
 
-			console.log("Loading escape room into editor:", escapeRoom);
-
-			// Set the current escape room in the editor
 			dispatch(setCurrentEscapeRoom(escapeRoom));
 			setMode({ type: "edit", escapeRoomId });
 			setHasUnsavedChanges(false);
@@ -288,25 +258,18 @@ const EditorPage: React.FC = () => {
 	};
 
 	const handlePlayEscapeRoom = (escapeRoomId: number) => {
-		// TODO: Implement play functionality
 		console.log("Playing escape room:", escapeRoomId);
 	};
 
 	const handleSaveSuccess = () => {
 		setHasUnsavedChanges(false);
-		// Optionally refresh the list if we're editing
 		if (mode.type === "edit") {
 			refetch();
 		}
 	};
 
-	const handleSaveAndExit = () => {
-		// This would be called from the Editor component when save is successful
-		handleSaveSuccess();
-		setMode({ type: "view" });
-	};
 
-	// Show editor when in create or edit mode
+
 	if (mode.type === "create" || mode.type === "edit") {
 		return (
 			<div className='relative'>
@@ -331,7 +294,6 @@ const EditorPage: React.FC = () => {
 				<Editor
 					mode={mode.type}
 					onSaveSuccess={handleSaveSuccess}
-					onSaveAndExit={handleSaveAndExit}
 				/>
 
 				{/* Confirmation Modal */}
@@ -403,7 +365,6 @@ const EditorPage: React.FC = () => {
 						</span>
 					</div>
 				)}
-
 				{/* Error State */}
 				{error && (
 					<div className='bg-red-600/20 border border-red-500 text-red-300 p-4 rounded-lg mb-6 flex items-center'>
@@ -419,7 +380,6 @@ const EditorPage: React.FC = () => {
 						</button>
 					</div>
 				)}
-
 				{/* Empty State */}
 				{!loading && !error && escapeRooms.length === 0 && (
 					<div className='text-center py-12'>
@@ -439,26 +399,33 @@ const EditorPage: React.FC = () => {
 						</button>
 					</div>
 				)}
-
 				{/* Escape Rooms Grid */}
 				{!loading && !error && escapeRooms.length > 0 && (
-					<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-						{escapeRooms.map((escapeRoom) => (
-							<EscapeRoomCard
-								key={escapeRoom.id}
-								escapeRoom={escapeRoom}
-								mode='editor'
-								onEdit={handleEditEscapeRoom}
-								onDelete={handleDeleteSuccess}
-								onPlay={handlePlayEscapeRoom}
-								showEditButton={true}
-								showPlayButton={true}
-								showDeleteButton={true}
-								showMetaInfo={true}
-								className='bg-gray-800/90 backdrop-blur-sm border border-gray-600 hover:shadow-xl hover:border-mainMint transition-all duration-200'
-							/>
-						))}
-					</div>
+					<>
+						<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+							{escapeRooms.map((escapeRoom) => (
+								<EscapeRoomCard
+									key={escapeRoom.id}
+									escapeRoom={escapeRoom}
+									mode='editor'
+									onEdit={handleEditEscapeRoom}
+									onDelete={handleDeleteSuccess}
+									onPlay={handlePlayEscapeRoom}
+									showEditButton={true}
+									showPlayButton={true}
+									showDeleteButton={true}
+									showMetaInfo={true}
+									className='bg-gray-800/90 backdrop-blur-sm border border-gray-600 hover:shadow-xl hover:border-mainMint transition-all duration-200'
+								/>
+							))}
+						</div>
+						<Pagination
+							currentPage={pagination.currentPage}
+							lastPage={pagination.lastPage}
+							onPageChange={setPage}
+							total={pagination.total}
+						/>
+					</>
 				)}
 			</div>
 

@@ -6,13 +6,11 @@ import MainCanvasWrapper from "./Editor/MainCanvasWrapper";
 interface EditorProps {
 	mode?: "create" | "edit";
 	onSaveSuccess?: () => void;
-	onSaveAndExit?: () => void;
 }
 
 const Editor: React.FC<EditorProps> = ({
 	mode = "create",
 	onSaveSuccess,
-	onSaveAndExit,
 }) => {
 	return (
 		<div className='flex h-screen mx- bg-gray-900 text-white relative'>
@@ -30,7 +28,6 @@ const Editor: React.FC<EditorProps> = ({
 				<RightSidebar
 					mode={mode}
 					onSaveSuccess={onSaveSuccess}
-					onSaveAndExit={onSaveAndExit}
 				/>
 			</div>
 		</div>

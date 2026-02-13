@@ -19,7 +19,6 @@ interface SaveEscapeRoomModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	onSuccess?: () => void;
-	onSaveAndExit?: () => void;
 	mode?: "create" | "edit";
 }
 
@@ -27,7 +26,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 	isOpen,
 	onClose,
 	onSuccess,
-	// onSaveAndExit, // Commented out to avoid unused parameter error
 	mode = "create",
 }) => {
 	const authorizedClient = useAuthorizedApiClient();
@@ -43,11 +41,15 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 	);
 	const [isPlaying, setIsPlaying] = useState(false);
 
+	const [removeThumbnailFlag, setRemoveThumbnailFlag] = useState(false);
+	const [removeSoundtrackFlag, setRemoveSoundtrackFlag] = useState(false);
+
 	const currentEscapeRoom = useSelector((state: RootState) => {
 		return state.editor.escapeRooms.find(
 			(er) => er.id === state.editor.currentEscapeRoomId,
 		);
 	});
+
 
 	const validationSchema = Yup.object({
 		name: Yup.string()
@@ -60,12 +62,9 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 			.required("Opis jest wymagany"),
 	});
 
-	// Helper function to convert URL to relative path
 	const convertUrlToPath = (url: string | null | undefined): string | null => {
 		if (!url) return null;
-
 		if (url.startsWith("/storage/")) return url;
-
 		if (url.startsWith("http")) {
 			try {
 				const urlObj = new URL(url);
@@ -75,14 +74,71 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 				return null;
 			}
 		}
-
 		return url;
 	};
 
-	// Helper function to ensure riddle type is valid
 	const validateRiddleType = (type: string): string => {
-		const validTypes = ["knowledge", "math", "logic", "pattern", "word_puzzle"];
+		const validTypes = [
+			"knowledge",
+			"math",
+			"language",
+			"cypher",
+			"puzzleGame",
+		];
 		return validTypes.includes(type) ? type : "knowledge";
+	};
+
+	const convertGridToObject = (grid: any): any => {
+		if (!grid) return {};
+		if (!Array.isArray(grid)) {
+			const sanitized: any = {};
+			Object.entries(grid).forEach(([key, value]: [string, any]) => {
+				if (
+					value === "true" ||
+					value === true ||
+					value === "1" ||
+					value === 1
+				) {
+					sanitized[key] = "1";
+				}
+			});
+			return sanitized;
+		}
+		const gridObj: any = {};
+		grid.forEach((row: any[], rowIndex: number) => {
+			if (Array.isArray(row)) {
+				row.forEach((cell: any, colIndex: number) => {
+					if (cell === "1" || cell === 1 || cell === true) {
+						gridObj[`${rowIndex}-${colIndex}`] = "1";
+					}
+				});
+			}
+		});
+		return gridObj;
+	};
+
+	const convertWallsToObject = (walls: any, wallColor: string): any => {
+		if (!walls) return { wallColor };
+
+		if (typeof walls === "object" && !Array.isArray(walls)) {
+			return walls;
+		}
+
+		const wallsObj: any = { wallColor };
+		if (Array.isArray(walls)) {
+			walls.forEach((wall: any) => {
+				if (
+					typeof wall === "object" &&
+					wall.row !== undefined &&
+					wall.col !== undefined
+				) {
+					wallsObj[`${wall.row}-${wall.col}`] = wallColor;
+				} else if (typeof wall === "string" && wall.includes("-")) {
+					wallsObj[wall] = wallColor;
+				}
+			});
+		}
+		return wallsObj;
 	};
 
 	const formik = useFormik({
@@ -94,10 +150,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 		validationSchema,
 		onSubmit: async (values, { setSubmitting, setStatus }) => {
 			try {
-				console.log("=== STARTING FORM SUBMISSION ===");
-				console.log("Mode:", mode);
-				console.log("Current Escape Room:", currentEscapeRoom);
-
 				if (!currentEscapeRoom) {
 					throw new Error("Brak danych Escape Room do zapisania");
 				}
@@ -106,9 +158,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 					throw new Error("Przynajmniej jeden pokój jest wymagany");
 				}
 
-				console.log("Rooms count:", currentEscapeRoom.rooms.length);
-
-				// Check for rooms exceeding riddle limit
 				const roomsExceedingLimit = currentEscapeRoom.rooms.filter(
 					(room) => (room.riddles?.length || 0) > 5,
 				);
@@ -120,34 +169,68 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 								currentEscapeRoom.rooms.findIndex((r) => r === room) + 1,
 						)
 						.join(", ");
-
 					setStatus({
 						type: "error",
-						message: `Pokoje ${roomNumbers} przekraczają limit 5 zagadek na pokój. Usuń nadmiarowe zagadki przed zapisaniem.`,
+						message: `Pokoje ${roomNumbers} przekraczają limit 5 zagadek na pokój.`,
 					});
 					return;
 				}
 
-				// Transform the escape room data with proper validation
 				const roomsData = currentEscapeRoom.rooms.map((room) => ({
-					grid: room.grid || {},
-					walls: room.walls || {},
+					grid: convertGridToObject(room.grid),
+					walls: convertWallsToObject(room.walls, room.wallColor || "#888888"),
 					floorColor: room.floorColor,
-					wallColor: room.wallColor || "#272626",
+					wallColor: room.wallColor || "#888888",
 					wallThickness: room.wallThickness || 20,
 					floorTexture: room.floorTexture,
 					floorTextureAssetId: room.floorTextureAssetId || null,
 					doorTexture: room.doorTexture,
 					doorTextureAssetId: room.doorTextureAssetId || null,
 					floorAccepted: room.floorAccepted || false,
-					startingPoint: room.startingPoint || { row: 0, col: 0 },
-					door: room.door || { row: 0, col: 0, rotation: 0 },
+					startingPoint: {
+						row:
+							typeof room.startingPoint?.row === "number"
+								? room.startingPoint.row
+								: parseInt(room.startingPoint?.row ?? "0", 10) || 0,
+						col:
+							typeof room.startingPoint?.col === "number"
+								? room.startingPoint.col
+								: parseInt(room.startingPoint?.col ?? "0", 10) || 0,
+					},
+					door: room.door
+						? room.door.rotation !== undefined && room.door.rotation !== 0
+							? {
+									row:
+										typeof room.door.row === "number"
+											? room.door.row
+											: parseInt(room.door.row ?? "0", 10) || 0,
+									col:
+										typeof room.door.col === "number"
+											? room.door.col
+											: parseInt(room.door.col ?? "0", 10) || 0,
+									rotation:
+										typeof room.door.rotation === "number"
+											? room.door.rotation
+											: parseInt(room.door.rotation ?? "0", 10) || 0,
+									assetId: (room.door as any).assetId ?? null,
+								}
+							: {
+									row:
+										typeof room.door.row === "number"
+											? room.door.row
+											: parseInt(room.door.row ?? "0", 10) || 0,
+									col:
+										typeof room.door.col === "number"
+											? room.door.col
+											: parseInt(room.door.col ?? "0", 10) || 0,
+									assetId: (room.door as any).assetId ?? null,
+								}
+						: { row: 0, col: 0, assetId: null },
 					riddles: (room.riddles || [])
-						.filter((riddle) => {
-							// Only include riddles with required fields
-							return riddle.title && riddle.question && riddle.answer;
-						})
-						.slice(0, 5) // Enforce maximum 5 riddles per room
+						.filter(
+							(riddle) => riddle.title && riddle.question && riddle.answer,
+						)
+						.slice(0, 5)
 						.map((riddle) => ({
 							id: riddle.id,
 							position: {
@@ -175,31 +258,20 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 							col: prop.position?.col || 0,
 						},
 						rotation: prop.rotation || 0,
-						hasCollider: prop.hasCollider || false,
 					})),
 				}));
 
-				console.log("Transformed rooms data:", roomsData);
-
-				// Determine the API endpoint based on mode
 				const endpoint =
 					mode === "edit" && currentEscapeRoom.id
 						? `/escape-room/${currentEscapeRoom.id.replace("escape-room-", "")}`
 						: "/escape-room/";
 
-				console.log("API Endpoint:", endpoint);
-
 				if (mode === "edit") {
-					// For edit mode: Use proper PUT method with JSON payload
-					console.log("Sending PUT request with JSON...");
-
 					const requestData = {
 						name: values.name,
 						description: values.description,
 						rooms: roomsData,
 					};
-
-					console.log("Request data:", requestData);
 
 					await authorizedClient.put(endpoint, requestData, {
 						headers: {
@@ -207,19 +279,26 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 						},
 					});
 
-					// Handle file uploads separately if needed
-					if (thumbnailFile || soundtrackFile) {
-						console.log("Uploading files separately...");
+					if (
+						thumbnailFile ||
+						soundtrackFile ||
+						removeThumbnailFlag ||
+						removeSoundtrackFlag
+					) {
 						const fileFormData = new FormData();
 
 						if (thumbnailFile) {
 							fileFormData.append("thumbnail", thumbnailFile);
-						}
-						if (soundtrackFile) {
-							fileFormData.append("soundtrack", soundtrackFile);
+						} else if (removeThumbnailFlag) {
+							fileFormData.append("remove_thumbnail", "1");
 						}
 
-						// Upload files to a separate endpoint or handle them differently
+						if (soundtrackFile) {
+							fileFormData.append("soundtrack", soundtrackFile);
+						} else if (removeSoundtrackFlag) {
+							fileFormData.append("remove_soundtrack", "1");
+						}
+
 						await authorizedClient.post(`${endpoint}/files`, fileFormData, {
 							headers: {
 								"Content-Type": "multipart/form-data",
@@ -227,37 +306,234 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 						});
 					}
 				} else {
-					// For create mode: Use FormData but optimize it
-					console.log("Sending POST request with optimized FormData...");
-
 					const formData = new FormData();
-
-					// Add basic fields
 					formData.append("name", values.name);
 					formData.append("description", values.description);
 
-					// Add files directly if selected
 					if (thumbnailFile) {
-						console.log("Adding thumbnail file:", thumbnailFile.name);
 						formData.append("thumbnail", thumbnailFile);
 					}
 					if (soundtrackFile) {
-						console.log("Adding soundtrack file:", soundtrackFile.name);
 						formData.append("soundtrack", soundtrackFile);
 					}
 
-					// Add rooms as JSON string to avoid exceeding form field limits
-					formData.append("rooms", JSON.stringify(roomsData));
+					roomsData.forEach((room: any, roomIndex: number) => {
+						if (typeof room.grid === "object" && room.grid !== null) {
+							Object.entries(room.grid).forEach(
+								([key, value]: [string, any]) => {
+									formData.append(
+										`rooms[${roomIndex}][grid][${key}]`,
+										String(value),
+									);
+								},
+							);
+						}
 
-					console.log("Sending optimized FormData...");
+						if (typeof room.walls === "object" && room.walls !== null) {
+							Object.entries(room.walls).forEach(
+								([key, value]: [string, any]) => {
+									formData.append(
+										`rooms[${roomIndex}][walls][${key}]`,
+										String(value),
+									);
+								},
+							);
+						}
+
+						if (typeof room.walls === "object" && room.walls !== null) {
+							Object.entries(room.walls).forEach(
+								([key, value]: [string, any]) => {
+									formData.append(
+										`rooms[${roomIndex}][walls][${key}]`,
+										String(value),
+									);
+								},
+							);
+						}
+
+						formData.append(
+							`rooms[${roomIndex}][wallColor]`,
+							room.wallColor || "#888888",
+						);
+
+						formData.append(
+							`rooms[${roomIndex}][wallThickness]`,
+							String(room.wallThickness || 16),
+						);
+
+						if (room.floorTexture) {
+							formData.append(
+								`rooms[${roomIndex}][floorTexture]`,
+								room.floorTexture,
+							);
+						}
+						if (room.floorTextureAssetId) {
+							formData.append(
+								`rooms[${roomIndex}][floorTextureAssetId]`,
+								String(room.floorTextureAssetId),
+							);
+						}
+						if (room.doorTexture) {
+							formData.append(
+								`rooms[${roomIndex}][doorTexture]`,
+								room.doorTexture,
+							);
+						}
+						if (room.doorTextureAssetId) {
+							formData.append(
+								`rooms[${roomIndex}][doorTextureAssetId]`,
+								String(room.doorTextureAssetId),
+							);
+						}
+						if (room.floorAccepted !== undefined) {
+							formData.append(
+								`rooms[${roomIndex}][floorAccepted]`,
+								room.floorAccepted ? "1" : "0",
+							);
+						}
+
+						formData.append(
+							`rooms[${roomIndex}][startingPoint][row]`,
+							String(room.startingPoint.row),
+						);
+						formData.append(
+							`rooms[${roomIndex}][startingPoint][col]`,
+							String(room.startingPoint.col),
+						);
+						formData.append(
+							`rooms[${roomIndex}][door][row]`,
+							String(parseInt(room.door.row) || 0),
+						);
+						formData.append(
+							`rooms[${roomIndex}][door][col]`,
+							String(parseInt(room.door.col) || 0),
+						);
+						if (room.door.rotation !== undefined) {
+							formData.append(
+								`rooms[${roomIndex}][door][rotation]`,
+								String(room.door.rotation),
+							);
+						}
+
+						room.riddles?.forEach((riddle: any, riddleIndex: number) => {
+							if (riddle.id)
+								formData.append(
+									`rooms[${roomIndex}][riddles][${riddleIndex}][id]`,
+									riddle.id,
+								);
+							formData.append(
+								`rooms[${roomIndex}][riddles][${riddleIndex}][position][row]`,
+								String(riddle.position.row),
+							);
+							formData.append(
+								`rooms[${roomIndex}][riddles][${riddleIndex}][position][col]`,
+								String(riddle.position.col),
+							);
+							formData.append(
+								`rooms[${roomIndex}][riddles][${riddleIndex}][type]`,
+								riddle.type,
+							);
+							formData.append(
+								`rooms[${roomIndex}][riddles][${riddleIndex}][data][title]`,
+								riddle.data.title,
+							);
+							formData.append(
+								`rooms[${roomIndex}][riddles][${riddleIndex}][data][question]`,
+								riddle.data.question,
+							);
+							formData.append(
+								`rooms[${roomIndex}][riddles][${riddleIndex}][data][answer]`,
+								riddle.data.answer,
+							);
+
+							riddle.data.hints?.forEach((hint: string, hintIndex: number) => {
+								formData.append(
+									`rooms[${roomIndex}][riddles][${riddleIndex}][data][hints][${hintIndex}]`,
+									hint,
+								);
+							});
+
+							if (
+								riddle.data.options &&
+								typeof riddle.data.options === "object"
+							) {
+								if (Array.isArray(riddle.data.options)) {
+									riddle.data.options.forEach(
+										(option: any, optionIndex: number) => {
+											formData.append(
+												`rooms[${roomIndex}][riddles][${riddleIndex}][data][options][${optionIndex}]`,
+												String(option),
+											);
+										},
+									);
+								} else {
+									Object.entries(riddle.data.options).forEach(
+										([key, value]) => {
+											formData.append(
+												`rooms[${roomIndex}][riddles][${riddleIndex}][data][options][${key}]`,
+												String(value),
+											);
+										},
+									);
+								}
+							}
+
+							if (riddle.assetId) {
+								formData.append(
+									`rooms[${roomIndex}][riddles][${riddleIndex}][assetId]`,
+									String(riddle.assetId),
+								);
+							}
+							if (riddle.texture) {
+								formData.append(
+									`rooms[${roomIndex}][riddles][${riddleIndex}][texture]`,
+									riddle.texture,
+								);
+							}
+						});
+
+						room.props?.forEach((prop: any, propIndex: number) => {
+							if (prop.id)
+								formData.append(
+									`rooms[${roomIndex}][props][${propIndex}][id]`,
+									prop.id,
+								);
+							formData.append(
+								`rooms[${roomIndex}][props][${propIndex}][name]`,
+								prop.name,
+							);
+							if (prop.imageUrl)
+								formData.append(
+									`rooms[${roomIndex}][props][${propIndex}][imageUrl]`,
+									prop.imageUrl,
+								);
+							formData.append(
+								`rooms[${roomIndex}][props][${propIndex}][assetId]`,
+								String(prop.assetId),
+							);
+							formData.append(
+								`rooms[${roomIndex}][props][${propIndex}][position][row]`,
+								String(prop.position.row),
+							);
+							formData.append(
+								`rooms[${roomIndex}][props][${propIndex}][position][col]`,
+								String(prop.position.col),
+							);
+							if (prop.rotation !== undefined) {
+								formData.append(
+									`rooms[${roomIndex}][props][${propIndex}][rotation]`,
+									String(prop.rotation),
+								);
+							}
+						});
+					});
+
 					await authorizedClient.post(endpoint, formData, {
 						headers: {
 							"Content-Type": "multipart/form-data",
 						},
 					});
 				}
-
-				console.log("Request successful!");
 
 				setStatus({
 					type: "success",
@@ -267,19 +543,14 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 							: "Escape Room zapisany pomyślnie!",
 				});
 
-				// Always redirect to editor page after successful save
 				setTimeout(() => {
 					if (onSuccess) {
 						onSuccess();
 					}
-					// Navigate back to editor page where user can select escape rooms
 					window.location.href = "/editor";
 				}, 1500);
 			} catch (error: any) {
-				console.error("=== ERROR SAVING ESCAPE ROOM ===");
-				console.error("Error object:", error);
-				console.error("Error response:", error?.response);
-				console.error("Error response data:", error?.response?.data);
+				console.error("=== ERROR SAVING ESCAPE ROOM ===", error);
 
 				let errorMessage = "Błąd podczas zapisywania";
 				if (error?.response?.data?.message) {
@@ -304,7 +575,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 
 	const handleThumbnailUpload = (file: File) => {
 		if (!file) return;
-
 		setThumbnailFile(file);
 		const reader = new FileReader();
 		reader.onload = (e) => {
@@ -315,7 +585,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 
 	const handleSoundtrackUpload = (file: File) => {
 		if (!file) return;
-
 		setSoundtrackFile(file);
 		const reader = new FileReader();
 		reader.onload = (e) => {
@@ -338,6 +607,7 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 	const removeThumbnail = () => {
 		setThumbnailFile(null);
 		setThumbnailPreview(null);
+		setRemoveThumbnailFlag(true);
 		if (thumbnailInputRef.current) {
 			thumbnailInputRef.current.value = "";
 		}
@@ -347,12 +617,12 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 		setSoundtrackFile(null);
 		setSoundtrackPreview(null);
 		setIsPlaying(false);
+		setRemoveSoundtrackFlag(true);
 		if (soundtrackInputRef.current) {
 			soundtrackInputRef.current.value = "";
 		}
 	};
 
-	// Initialize previews when modal opens
 	React.useEffect(() => {
 		if (isOpen && currentEscapeRoom?.metadata) {
 			if (currentEscapeRoom.metadata.thumbnail) {
@@ -366,13 +636,11 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 
 	if (!isOpen) return null;
 
-	// Check if we have minimum required data
 	const hasValidData =
 		currentEscapeRoom &&
 		currentEscapeRoom.rooms &&
 		currentEscapeRoom.rooms.length > 0;
 
-	// Count valid riddles (with title, question, and answer)
 	const validRiddlesCount =
 		currentEscapeRoom?.rooms.reduce((total, room) => {
 			return (
@@ -383,7 +651,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 			);
 		}, 0) || 0;
 
-	// Check for rooms with too many riddles
 	const roomsWithTooManyRiddles =
 		currentEscapeRoom?.rooms.filter(
 			(room) => (room.riddles?.length || 0) > 5,
@@ -391,10 +658,16 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 
 	const hasRiddleErrors = roomsWithTooManyRiddles.length > 0;
 
+	const roomsWithInvalidDoor =
+		currentEscapeRoom?.rooms.filter(
+			(room) => !room.door || (room.door.row === 0 && room.door.col === 0),
+		) || [];
+
+	const hasDoorWarnings = roomsWithInvalidDoor.length > 0;
+
 	return (
 		<div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
 			<div className='bg-gray-800 rounded-lg w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col'>
-				{/* Header */}
 				<div className='flex justify-between items-center p-6 border-b border-gray-700'>
 					<h2 className='text-2xl font-bold text-white'>
 						{mode === "edit" ? "Edytuj Escape Room" : "Zapisz Escape Room"}
@@ -406,20 +679,18 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 					</button>
 				</div>
 
-				{/* Warning if no valid data */}
 				{!hasValidData && (
 					<div className='bg-red-600 text-white p-4 mx-6 mt-6 rounded-lg'>
 						<div className='flex items-center'>
 							<div className='mr-3'>⚠</div>
 							<div>
 								Brak wymaganych danych. Upewnij się, że masz utworzony
-								przynajmniej jeden pokój z podstawową konfiguracją.
+								przynajmniej jeden pokój.
 							</div>
 						</div>
 					</div>
 				)}
 
-				{/* Warning for too many riddles */}
 				{hasRiddleErrors && (
 					<div className='bg-orange-600 text-white p-4 mx-6 mt-6 rounded-lg'>
 						<div className='flex items-center'>
@@ -429,7 +700,7 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 									Przekroczono limit zagadek!
 								</div>
 								<div className='text-sm'>
-									{roomsWithTooManyRiddles.length === 1 ? "Pokój" : "Pokoje"}{" "}
+									Pokoje{" "}
 									{roomsWithTooManyRiddles
 										.map(
 											(room) =>
@@ -438,30 +709,51 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 												) ?? -1) + 1,
 										)
 										.join(", ")}{" "}
-									{roomsWithTooManyRiddles.length === 1 ? "ma" : "mają"} więcej
-									niż 5 zagadek. Usuń nadmiarowe zagadki przed zapisaniem.
+									mają więcej niż 5 zagadek.
 								</div>
 							</div>
 						</div>
 					</div>
 				)}
 
-				{/* Content */}
+				{hasDoorWarnings && (
+					<div className='bg-yellow-600 text-white p-4 mx-6 mt-6 rounded-lg'>
+						<div className='flex items-center'>
+							<div className='mr-3'>⚠</div>
+							<div>
+								<div className='font-semibold mb-1'>
+									Nieprawidłowa pozycja drzwi!
+								</div>
+								<div className='text-sm'>
+									Pokoje{" "}
+									{roomsWithInvalidDoor
+										.map(
+											(room) =>
+												(currentEscapeRoom?.rooms.findIndex(
+													(r) => r === room,
+												) ?? -1) + 1,
+										)
+										.join(", ")}{" "}
+									mają drzwi na pozycji (0,0).
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
+
 				<div className='flex-1 overflow-y-auto p-6'>
 					<form
 						onSubmit={formik.handleSubmit}
 						className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
-						{/* Left Column - Basic Info */}
 						<div className='space-y-6'>
 							<div className='bg-gray-700 p-6 rounded-lg'>
 								<h3 className='text-lg font-semibold text-white mb-4'>
 									Podstawowe informacje
 								</h3>
 
-								{/* Name Field */}
 								<div className='mb-4'>
 									<label className='block text-sm font-medium text-gray-300 mb-2'>
-										Nazwa * (obecna długość: {formik.values.name.length})
+										Nazwa * ({formik.values.name.length}/100)
 									</label>
 									<input
 										type='text'
@@ -483,10 +775,9 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 									)}
 								</div>
 
-								{/* Description Field */}
 								<div>
 									<label className='block text-sm font-medium text-gray-300 mb-2'>
-										Opis * (obecna długość: {formik.values.description.length})
+										Opis * ({formik.values.description.length}/500)
 									</label>
 									<textarea
 										name='description'
@@ -509,7 +800,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 								</div>
 							</div>
 
-							{/* Room Summary */}
 							<div className='bg-gray-700 p-6 rounded-lg'>
 								<h3 className='text-lg font-semibold text-white mb-4'>
 									Podsumowanie pokoi
@@ -522,7 +812,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 										</span>
 									</div>
 
-									{/* Show validation info */}
 									<div className='bg-gray-600 p-3 rounded'>
 										<div className='text-sm text-gray-300 mb-2'>
 											Sprawdzenie zagadek:
@@ -538,12 +827,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 												{validRiddlesCount}
 											</span>
 										</div>
-										{validRiddlesCount === 0 && (
-											<p className='text-yellow-400 text-xs mt-1'>
-												💡 Zagadki bez tytułu, pytania lub odpowiedzi będą
-												pominięte
-											</p>
-										)}
 									</div>
 
 									{currentEscapeRoom?.rooms.map((room, index) => {
@@ -552,19 +835,12 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 												(riddle) =>
 													riddle.title && riddle.question && riddle.answer,
 											).length || 0;
-
 										const totalRiddlesInRoom = room.riddles?.length || 0;
-										const hasMaxRiddles = totalRiddlesInRoom >= 5;
 
 										return (
 											<div key={room.id} className='bg-gray-600 p-3 rounded'>
 												<h4 className='text-white font-medium mb-2'>
 													Pokój {index + 1}
-													{hasMaxRiddles && (
-														<span className='ml-2 text-xs bg-orange-600 text-white px-2 py-1 rounded'>
-															MAX
-														</span>
-													)}
 												</h4>
 												<div className='grid grid-cols-3 gap-4 text-sm'>
 													<div className='text-center'>
@@ -580,21 +856,11 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 																totalRiddlesInRoom > 5
 																	? "text-red-400"
 																	: totalRiddlesInRoom === 5
-																	? "text-orange-400"
-																	: validRiddlesInRoom > 0
-																	? "text-green-400"
-																	: "text-white"
+																		? "text-orange-400"
+																		: "text-green-400"
 															}`}>
-															{validRiddlesInRoom} / {totalRiddlesInRoom}
-															<span className='text-gray-400 text-xs ml-1'>
-																(max 5)
-															</span>
+															{validRiddlesInRoom}/{totalRiddlesInRoom}
 														</div>
-														{totalRiddlesInRoom > 5 && (
-															<div className='text-red-400 text-xs mt-1'>
-																⚠ Przekroczono limit!
-															</div>
-														)}
 													</div>
 													<div className='text-center'>
 														<div className='text-gray-400'>Przedmioty</div>
@@ -610,9 +876,7 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 							</div>
 						</div>
 
-						{/* Right Column - Media */}
 						<div className='space-y-6'>
-							{/* Thumbnail Section */}
 							<div className='bg-gray-700 p-6 rounded-lg'>
 								<h3 className='text-lg font-semibold text-white mb-4 flex items-center'>
 									<IoImage className='mr-2' />
@@ -661,7 +925,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 								/>
 							</div>
 
-							{/* Soundtrack Section */}
 							<div className='bg-gray-700 p-6 rounded-lg'>
 								<h3 className='text-lg font-semibold text-white mb-4 flex items-center'>
 									<IoMusicalNotes className='mr-2' />
@@ -733,7 +996,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 						</div>
 					</form>
 
-					{/* Status Message */}
 					{formik.status && (
 						<div
 							className={`mt-6 p-4 rounded-lg ${
@@ -751,7 +1013,6 @@ const SaveEscapeRoomModal: React.FC<SaveEscapeRoomModalProps> = ({
 					)}
 				</div>
 
-				{/* Footer - Only two buttons: Anuluj and Zapisz */}
 				<div className='flex justify-end space-x-4 p-6 border-t border-gray-700 bg-gray-750'>
 					<button
 						type='button'

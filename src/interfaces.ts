@@ -58,7 +58,6 @@ export interface Asset {
 	name: string;
 	type: string;
 	image_url: string;
-	has_collider: boolean;
 	owner_id: number | null;
 	is_public: boolean;
 	created_at: string;
@@ -110,7 +109,6 @@ export interface Prop {
 	rotation: number;
 	flipHorizontal?: boolean;
 	flipVertical?: boolean;
-	hasCollider: boolean;
 }
 
 export interface Riddle {
@@ -182,4 +180,41 @@ export interface ConfirmationModalProps {
 	confirmText?: string;
 	cancelText?: string;
 	confirmButtonClass?: string;
+}
+
+
+export interface GameHistoryRiddle {
+	riddle_id: number;
+	question: string | null;
+	solved: boolean;
+	time_to_solve: number | null;
+	attempt_number: number;
+	max_attempts: number;
+}
+
+export interface GameHistoryEscapeRoom {
+	id: number;
+	name: string | null;
+	description: string | null;
+	thumbnail_url: string | null; 
+}
+
+export interface GameHistoryAttempt {
+	attempt_id: number;
+	escape_room: GameHistoryEscapeRoom;
+	start_time: string; 
+	end_time: string;
+	completed: boolean;
+	time_spent: number; 
+	hints_used: number;
+	score: number;
+	status: "completed" | "active" | "paused" | string;
+	riddles: GameHistoryRiddle[];
+}
+
+export interface GameHistoryResponse {
+	data: GameHistoryAttempt[];
+	current_page: number;
+	last_page: number;
+	total: number;
 }

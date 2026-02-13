@@ -1,14 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 import { useSelector } from "react-redux";
 import { selectUser } from "../store/slices/userSlice";
-import { FaTrophy, FaGamepad } from "react-icons/fa";
 import AvatarPreview from "../components/molecules/AvatarPreview";
+import GameHistory from "../components/molecules/GameHistory";
+import { useGetUserStats } from "../hooks/useGetUserStats";
 
 const ProfilePage: React.FC = () => {
 	const user = useSelector(selectUser);
-	const [activeTab, setActiveTab] = useState<"achievements" | "history">(
-		"achievements",
-	);
+	const { stats, loading: statsLoading } = useGetUserStats();
 
 	const renderAvatar = () => {
 		if (user?.avatar_url) {
@@ -27,7 +26,6 @@ const ProfilePage: React.FC = () => {
 				} else {
 					avatarConfig = user.player_configuration.avatar;
 				}
-
 				return <AvatarPreview colors={avatarConfig} size='large' />;
 			} catch (e) {
 				console.error("Błąd parsowania konfiguracji awatara:", e);
@@ -70,24 +68,24 @@ const ProfilePage: React.FC = () => {
 			<div className='max-w-6xl mx-auto px-4 md:px-6 pb-16'>
 				<div className='grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12'>
 					<div className='bg-gray-800 rounded-lg p-4 md:p-6 text-center border border-gray-600'>
-						<div className='text-2xl md:text-3xl font-bold text-gray-500 mb-2'>
-							-
+						<div className='text-2xl md:text-3xl font-bold text-mainMint mb-2'>
+							{statsLoading ? "..." : (stats?.completed_rooms ?? 0)}
 						</div>
 						<div className='text-gray-400 text-sm md:text-base'>
 							Ukończone Pokoje
 						</div>
 					</div>
 					<div className='bg-gray-800 rounded-lg p-4 md:p-6 text-center border border-gray-600'>
-						<div className='text-2xl md:text-3xl font-bold text-gray-500 mb-2'>
-							-
+						<div className='text-2xl md:text-3xl font-bold text-mainMint mb-2'>
+							{statsLoading ? "..." : (stats?.total_score ?? 0)}
 						</div>
 						<div className='text-gray-400 text-sm md:text-base'>
 							Łączny Wynik
 						</div>
 					</div>
 					<div className='bg-gray-800 rounded-lg p-4 md:p-6 text-center border border-gray-600'>
-						<div className='text-2xl md:text-3xl font-bold text-gray-500 mb-2'>
-							-
+						<div className='text-2xl md:text-3xl font-bold text-mainMint mb-2'>
+							{statsLoading ? "..." : (stats?.average_score ?? 0)}
 						</div>
 						<div className='text-gray-400 text-sm md:text-base'>
 							Średnia Ocena
@@ -95,53 +93,10 @@ const ProfilePage: React.FC = () => {
 					</div>
 				</div>
 
-				{/* Tabs */}
+				{/* Game History */}
 				<div className='bg-gray-800 rounded-lg border border-gray-600 overflow-hidden'>
-					<div className='flex border-b border-gray-600'>
-						<button
-							onClick={() => setActiveTab("achievements")}
-							className={`flex-1 px-4 md:px-6 py-3 md:py-4 font-medium transition-colors text-sm md:text-base ${
-								activeTab === "achievements"
-									? "bg-gray-700 text-mainMint border-b-2 border-mainMint"
-									: "text-gray-400 hover:text-light"
-							}`}>
-							Osiągnięcia
-						</button>
-						<button
-							onClick={() => setActiveTab("history")}
-							className={`flex-1 px-4 md:px-6 py-3 md:py-4 font-medium transition-colors text-sm md:text-base ${
-								activeTab === "history"
-									? "bg-gray-700 text-mainMint border-b-2 border-mainMint"
-									: "text-gray-400 hover:text-light"
-							}`}>
-							Historia Gier
-						</button>
-					</div>
-
 					<div className='p-4 md:p-6'>
-						{activeTab === "achievements" && (
-							<div className='text-center py-12'>
-								<FaTrophy className='text-6xl text-gray-600 mx-auto mb-4' />
-								<h3 className='text-xl font-bold text-gray-400 mb-2'>
-									Brak osiągnięć
-								</h3>
-								<p className='text-gray-500'>
-									Osiągnięcia będą dostępne wkrótce
-								</p>
-							</div>
-						)}
-
-						{activeTab === "history" && (
-							<div className='text-center py-12'>
-								<FaGamepad className='text-6xl text-gray-600 mx-auto mb-4' />
-								<h3 className='text-xl font-bold text-gray-400 mb-2'>
-									Brak historii gier
-								</h3>
-								<p className='text-gray-500'>
-									Historia gier będzie dostępna wkrótce
-								</p>
-							</div>
-						)}
+						<GameHistory />
 					</div>
 				</div>
 			</div>

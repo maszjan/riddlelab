@@ -3,14 +3,15 @@ import { FaSearch, FaGamepad, FaSpinner } from "react-icons/fa";
 import { IoAlert } from "react-icons/io5";
 import EscapeRoomCard from "../components/atoms/EscapeRoomCard";
 import { useGetEscapeRooms } from "../hooks/useGetEscapeRooms";
+import Pagination from "../components/atoms/Pagination";
 
 const EscapeRoomsPage: React.FC = () => {
 	const [searchTerm, setSearchTerm] = useState("");
+	const [page, setPage] = useState(1);
 
-	// Use the same hook as CommunityRoomsSection
-	const { escapeRooms, loading, error, refetch } = useGetEscapeRooms();
+	const { escapeRooms, loading, error, refetch, pagination } =
+		useGetEscapeRooms(page, 8);
 
-	// Filter rooms based on search term
 	const filteredRooms = escapeRooms.filter(
 		(room) =>
 			room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -83,28 +84,37 @@ const EscapeRoomsPage: React.FC = () => {
 					<div className='flex flex-col sm:flex-row justify-between items-center mb-8 mt-12 px-12'>
 						<h2 className='text-2xl font-bold text-light mb-4 sm:mb-0 flex items-center gap-2'>
 							<FaGamepad className='text-mainMint' />
-							Wszystkie Pokoje ({filteredRooms.length})
+							Wszystkie ({filteredRooms.length})
 						</h2>
 					</div>
 				)}
 
 				{/* Escape Rooms Grid */}
 				{!loading && !error && filteredRooms.length > 0 && (
-					<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-12'>
-						{filteredRooms.map((room) => (
-							<EscapeRoomCard
-								key={room.id}
-								escapeRoom={room}
-								mode='player'
-								showEditButton={false}
-								showPlayButton={true}
-								showDeleteButton={false}
-								showMetaInfo={false}
-								onPlay={handlePlayRoom}
-								className='bg-gray-800 border border-gray-600 hover:shadow-xl hover:border-mainMint'
-							/>
-						))}
-					</div>
+					<>
+						<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-12'>
+							{filteredRooms.map((room) => (
+								<EscapeRoomCard
+									key={room.id}
+									escapeRoom={room}
+									mode='player'
+									showEditButton={false}
+									showPlayButton={true}
+									showDeleteButton={false}
+									showMetaInfo={false}
+									onPlay={handlePlayRoom}
+									className='bg-gray-800 border border-gray-600 hover:shadow-xl hover:border-mainMint'
+								/>
+							))}
+						</div>
+						{/* 4. Pagination */}
+						<Pagination
+							currentPage={pagination.currentPage}
+							lastPage={pagination.lastPage}
+							onPageChange={setPage}
+							total={pagination.total}
+						/>
+					</>
 				)}
 
 				{/* Empty State */}

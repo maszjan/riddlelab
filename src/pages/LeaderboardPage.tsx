@@ -1,11 +1,35 @@
 import React, { useState } from "react";
 import { FaSearch, FaTrophy } from "react-icons/fa";
+import { useGetLeaderboard } from "../hooks/useGetLeaderboard";
+import AvatarPreview from "../components/molecules/AvatarPreview";
 
 const LeaderboardPage: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<"daily" | "weekly" | "allTime">(
 		"allTime",
 	);
 	const [searchTerm, setSearchTerm] = useState("");
+
+	const {
+		data: entries,
+		loading,
+		error,
+		page,
+		lastPage,
+		setPage,
+	} = useGetLeaderboard(activeTab, searchTerm);
+
+	const getAvatarConfig = (playerConfig: any) => {
+		try {
+			if (typeof playerConfig === "string") {
+				return JSON.parse(playerConfig).avatar;
+			} else if (playerConfig && playerConfig.avatar) {
+				return playerConfig.avatar;
+			}
+		} catch {
+			return null;
+		}
+		return null;
+	};
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-dark via-slate-800 to-dark'>
@@ -88,15 +112,78 @@ const LeaderboardPage: React.FC = () => {
 						<div className='text-right'>Wynik</div>
 					</div>
 
-					{/* No Data State */}
-					<div className='px-6 py-12 text-center'>
-						<FaTrophy className='text-6xl text-gray-600 mx-auto mb-4' />
-						<h3 className='text-xl font-bold text-gray-400 mb-2'>
-							Brak danych
-						</h3>
-						<p className='text-gray-500'>Ranking będzie dostępny wkrótce</p>
-					</div>
+					{loading ? (
+						<div className='px-6 py-12 text-center text-mainMint'>
+							Ładowanie...
+						</div>
+					) : error ? (
+						<div className='px-6 py-12 text-center text-red-500'>{error}</div>
+					) : entries.length === 0 ? (
+						<div className='px-6 py-12 text-center'>
+							<FaTrophy className='text-6xl text-gray-600 mx-auto mb-4' />
+							<h3 className='text-xl font-bold text-gray-400 mb-2'>
+								Brak danych
+							</h3>
+							<p className='text-gray-500'>Ranking będzie dostępny wkrótce</p>
+						</div>
+					) : (
+						<div>
+							{entries.map((entry) => {
+								const avatarConfig = getAvatarConfig(
+									entry.user.player_configuration,
+								);
+
+								return (
+									<div
+										key={entry.user.id}
+										className='grid grid-cols-3 gap-4 px-6 py-4 border-b border-gray-700 items-center bg-gray-850/80 hover:bg-mainMint/10 transition text-light'>
+										<div className='text-mainMint font-extrabold text-lg text-center'>
+											{entry.position}
+										</div>
+										<div className='flex items-center gap-3 overflow-hidden text-light font-bold'>
+											{avatarConfig ? (
+												<div className=' flex-shrink-0'>
+													<AvatarPreview colors={avatarConfig} size='small' />
+												</div>
+											) : (
+												<div className='w-8 h-8 rounded-full bg-mainMint flex items-center justify-center text-dark font-extrabold text-sm border-2 border-mainMint'>
+													{entry.user.name.charAt(0).toUpperCase()}
+												</div>
+											)}
+											<span className='truncate max-w-[160px]'>
+												{entry.user.name}
+											</span>
+										</div>
+										<div className='text-right text-mainMint font-semibold text-lg'>
+											{entry.total_score ?? 0}
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					)}
 				</div>
+
+				{/* Paginacja */}
+				{lastPage > 1 && (
+					<div className='flex justify-center gap-2 mt-6'>
+						<button
+							onClick={() => setPage(page - 1)}
+							disabled={page <= 1}
+							className='px-4 py-2 bg-gray-700 text-light rounded disabled:opacity-50'>
+							Poprzednia
+						</button>
+						<span className='px-3 py-2 text-light font-semibold'>
+							Strona {page} z {lastPage}
+						</span>
+						<button
+							onClick={() => setPage(page + 1)}
+							disabled={page >= lastPage}
+							className='px-4 py-2 bg-gray-700 text-light rounded disabled:opacity-50'>
+							Następna
+						</button>
+					</div>
+				)}
 			</div>
 		</div>
 	);
